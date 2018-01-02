@@ -23,7 +23,7 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import log_loss
 #
 from keras.optimizers import Adam, SGD
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, TensorBoard
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 #
 import augmentations as aug
 import utils
@@ -72,6 +72,9 @@ def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augmen
                     x = aug.HorizontalFlip(x, u=0.5, v=np.random.random())
                     x = aug.VerticalFlip(x, u=0.5, v=np.random.random())
 
+                if augment.get('Noise', False):
+                    x = aug.Noise(x, u=0.5, v=np.random.random())
+
                 x_batch.append(x)
                 
             x_batch = np.array(x_batch, np.float32)
@@ -80,8 +83,7 @@ def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augmen
             
 
 ###############################################################################
-if __name__ == '__main__':
-    
+def train(model):
     np.random.seed(1017)
     target = 'is_iceberg'
     
@@ -104,7 +106,7 @@ if __name__ == '__main__':
     nb_filters = params.nb_filters
     nb_dense = params.nb_dense
     weights_file = params.weights_file
-    model = models.get_model(img_shape=(75, 75, 2), f=nb_filters, h=nb_dense)
+    #model = models.get_model(img_shape=(75, 75, 2), f=nb_filters, h=nb_dense)
     weights_init = params.weights_init
     model.save(weights_init)
     #training
@@ -116,6 +118,7 @@ if __name__ == '__main__':
     opt_augments['Rotate'] = True
     opt_augments['Shift'] = True
     opt_augments['Zoom'] = True    
+    opt_augments['Noise'] = True
     print(opt_augments)
 
     #train, validataion split
@@ -148,7 +151,7 @@ if __name__ == '__main__':
         reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=40, verbose=1, epsilon=1e-4, mode='min')
         model_chk = ModelCheckpoint(monitor='val_loss', filepath=weights_file, save_best_only=True, save_weights_only=True, mode='min')
         
-        callbacks = [earlystop, reduce_lr_loss, model_chk, TensorBoard(log_dir='../logs')]
+        callbacks = [earlystop, reduce_lr_loss, model_chk]
         ##########
        
         model.fit_generator(generator=data_generator(x1, xm1, y1, batch_size=batch_size, augment=opt_augments),
@@ -178,6 +181,15 @@ if __name__ == '__main__':
             pred = np.squeeze(pred, axis=-1)
             
             file = 'subm_{}_f{:03d}.csv'.format(tmp, nb_filters)
+            model_file = 'subm_{}_model.txt'.format(tmp)
+            with open('../submit/{}'.format(file), 'w') as f:
+                model_file.write(model.summary())
             subm = pd.DataFrame({'id': ids, target: pred})
             subm.to_csv('../submit/{}'.format(file), index=False, float_format='%.6f')
+
+
+if __name__=='__main__':
+    for model in models.get_models():
+        train(model)
+
 

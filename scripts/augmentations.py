@@ -64,3 +64,9 @@ def Zoom(image, zoom_rg=(0.1, 0.1), u=0.5, v=1.0):
                                   row_axis=0, col_axis=1, channel_axis=2)
 
     return image
+
+
+def Noise(image, noise_rg=0.02, u=0.5, v=1.0):
+    if v < u:
+        noise_amp = (image.max()-image.min())*np.ranodm.rand()*noise_rg
+        return image + noise_amp*np.random.normal(size=image.shape)

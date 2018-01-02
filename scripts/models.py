@@ -32,6 +32,8 @@ def bn_pooling(x, k=2, s=2, m=0):
     return MaxPooling2D((k, k), strides=(s, s))(BatchNormalization(momentum=m)(x))
     
 
+
+
 def get_model(img_shape=(75, 75, 2), num_classes=1, f=8, h=128):
 
     """

@@ -1,1 +1,0 @@
-ConvNet weights for tensorflow
