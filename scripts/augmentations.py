@@ -39,7 +39,7 @@ def Rotate90(image, u=0.5, v=1.0):
     return image
     
 
-def Rotate(image, rotate_rg=45, u=0.5, v=1.0):
+def Rotate(image, rotate_rg=10, u=0.5, v=1.0):
 
     if v < u:
         image = prep.random_rotation(image, rg=rotate_rg, 
@@ -68,5 +68,6 @@ def Zoom(image, zoom_rg=(0.1, 0.1), u=0.5, v=1.0):
 
 def Noise(image, noise_rg=0.02, u=0.5, v=1.0):
     if v < u:
-        noise_amp = (image.max()-image.min())*np.ranodm.rand()*noise_rg
-        return image + noise_amp*np.random.normal(size=image.shape)
+        noise_amp = (image.max()-image.min())*np.random.rand()*noise_rg
+        image = image + noise_amp*np.random.normal(size=image.shape)
+    return image

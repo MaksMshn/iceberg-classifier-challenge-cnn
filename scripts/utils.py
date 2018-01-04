@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 
 
-def rescale(imgs): return imgs / 100. +  0.5
+def rescale(imgs): return imgs# / 100. +  0.5
 
 def read_jason(file='', loc='../input'):
 

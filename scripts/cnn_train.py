@@ -20,7 +20,7 @@ import datetime as dt
 from random import shuffle, uniform, seed
 #evaluation
 from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.metrics import log_loss
+#from sklearn.metrics import log_loss
 #
 from keras.optimizers import Adam, SGD
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
@@ -32,17 +32,22 @@ import params
 
 ###############################################################################
 
+def log_loss(t, p):
+    h_tp = -(1-t)*np.log(1-p+1.0e-8)-t*np.log(p+1.0e-8)
+    return np.mean(h_tp)
+
+
 def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augment={}, opt_shuffle=True):
     
     indices = [i for i in range(len(labels))]
-    
+    loop=0 
     while True:
         
         if opt_shuffle:
             shuffle(indices)
         
         x_data = np.copy(data)
-        x_meta_data = np.copy(meta_data)
+        #x_meta_data = np.copy(meta_data)
         x_labels = np.copy(labels)
         
         for start in range(0, len(labels), batch_size):
@@ -51,16 +56,17 @@ def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augmen
             
             #select data
             data_batch = x_data[sel_indices]
-            xm_batch = x_meta_data[sel_indices]
+            #xm_batch = x_meta_data[sel_indices]
             y_batch = x_labels[sel_indices]
+
             x_batch = []
             
             for x in data_batch:
                  
                 #augment                               
                 if augment.get('Rotate', False):
-                    x = aug.Rotate(x, u=0.1, v=np.random.random())
-                    x = aug.Rotate90(x, u=0.1, v=np.random.random())
+                    x = aug.Rotate(x, u=0.2, v=np.random.random())
+                    x = aug.Rotate90(x, u=0.999, v=np.random.random())
 
                 if augment.get('Shift', False):
                     x = aug.Shift(x, u=0.05, v=np.random.random())
@@ -76,14 +82,18 @@ def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augmen
                     x = aug.Noise(x, u=0.5, v=np.random.random())
 
                 x_batch.append(x)
+
                 
-            x_batch = np.array(x_batch, np.float32)
+            x_batch = np.array(x_batch, dtype=np.float32)
             
-            yield [x_batch, xm_batch], y_batch
+            #yield [x_batch, xm_batch], y_batch
+            loop += 1
+            print('Generator loop: {}'.format(loop))
+            yield x_batch, y_batch
             
 
 ###############################################################################
-def train(model):
+def train(model, name):
     np.random.seed(1017)
     target = 'is_iceberg'
     
@@ -93,7 +103,12 @@ def train(model):
     
     #target
     train_y = train[target].values
-    split_indices = train_y.copy()
+    # modify y, not needed originally
+    from keras.utils import to_categorical
+    train_y = to_categorical(train_y)
+    train_y = np.clip(train_y, .01, .99)
+
+    split_indices = train[target].values.copy()
     
     #data set
     train_X = utils.rescale(train_bands)
@@ -105,7 +120,8 @@ def train(model):
     #model
     nb_filters = params.nb_filters
     nb_dense = params.nb_dense
-    weights_file = params.weights_file
+    tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    weights_file = os.path.join("../weights/weights_{}_{}.hdf5".format(name, tmp))
     #model = models.get_model(img_shape=(75, 75, 2), f=nb_filters, h=nb_dense)
     weights_init = params.weights_init
     model.save(weights_init)
@@ -117,7 +133,7 @@ def train(model):
     opt_augments['Flip'] = True
     opt_augments['Rotate'] = True
     opt_augments['Shift'] = True
-    opt_augments['Zoom'] = True    
+    opt_augments['Zoom'] = True  
     opt_augments['Noise'] = True
     print(opt_augments)
 
@@ -147,9 +163,9 @@ def train(model):
         
         model.compile(optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
         #call backs
-        earlystop = EarlyStopping(monitor='val_loss', patience=100, verbose=1, min_delta=1e-4, mode='min')
-        reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=40, verbose=1, epsilon=1e-4, mode='min')
-        model_chk = ModelCheckpoint(monitor='val_loss', filepath=weights_file, save_best_only=True, save_weights_only=True, mode='min')
+        earlystop = EarlyStopping(monitor='val_loss', patience=10, verbose=1, min_delta=1e-4)
+        reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=40, verbose=1, epsilon=1e-4)
+        model_chk = ModelCheckpoint(monitor='val_loss', filepath=weights_file, save_best_only=True, save_weights_only=False)
         
         callbacks = [earlystop, reduce_lr_loss, model_chk]
         ##########
@@ -159,7 +175,7 @@ def train(model):
                             epochs=epochs,
                             verbose=2,
                             callbacks=callbacks,
-                            validation_data=data_generator(x2, xm2, y2, batch_size=batch_size),
+                            validation_data=data_generator(x2, xm2, y2, batch_size=batch_size, augment=opt_augments),
                             validation_steps=np.ceil(8.0 * float(len(y2)) / float(batch_size)))
 
 
@@ -167,29 +183,34 @@ def train(model):
 
             model.load_weights(weights_file)
             
-            p = model.predict([x2, xm2], batch_size=batch_size, verbose=1)
-            print('\n\nEvaluate loss in validation data: {}'.format(log_loss(y2, p)), flush=True)
+            #p = model.predict([x2, xm2], batch_size=batch_size, verbose=1)
+            p = model.predict(x2, batch_size=batch_size, verbose=2)
+            print('\n\nEvaluate loss in validation data: {}'.format(log_loss(y2[:,1], p[:,1])), flush=True)
 
-            p = model.predict([x1, xm1], batch_size=batch_size, verbose=1)
-            print('\n\nEvaluate loss in training data: {}'.format(log_loss(y1, p)), flush=True)
+            #p = model.predict([x1, xm1], batch_size=batch_size, verbose=1)
+            p = model.predict(x1, batch_size=batch_size, verbose=2)
+            print('\n\nEvaluate loss in training data: {}'.format(log_loss(y1[:,1], p[:,1])), flush=True)
             
             print('\nPredict...', flush=True)
             ids = test['id'].values
 
             #prediction
-            pred = model.predict([test_X_dup, test_meta], batch_size=batch_size, verbose=1)
-            pred = np.squeeze(pred, axis=-1)
+            #pred = model.predict([test_X_dup, test_meta], batch_size=batch_size, verbose=1)
+            pred = model.predict(test_X_dup, batch_size=batch_size, verbose=1)
+            #pred = np.squeeze(pred, axis=-1)
+            pred = np.clip(pred[:,1], .01, .99)
             
             file = 'subm_{}_f{:03d}.csv'.format(tmp, nb_filters)
             model_file = 'subm_{}_model.txt'.format(tmp)
-            with open('../submit/{}'.format(file), 'w') as f:
-                model_file.write(model.summary())
+            with open('../submit/{}'.format(model_file), 'w') as f:
+                model.summary(print_fn=lambda x: f.write(x + '\n'))
             subm = pd.DataFrame({'id': ids, target: pred})
             subm.to_csv('../submit/{}'.format(file), index=False, float_format='%.6f')
 
 
 if __name__=='__main__':
-    for model in models.get_models():
-        train(model)
+    #for model in models.get_models():
+    #    train(model)
+    train(models.model1()[0], models.model1.__name__)
 
 

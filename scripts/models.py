@@ -7,9 +7,15 @@ such as 'inc_angle'.
 
 @author: cttsai (Chia-Ta Tsai), @Oct 2017
 """
-from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Input, Flatten
-from keras.layers import GlobalMaxPooling2D
+import numpy as np
+import random as rand
+import math
+from keras.models import Sequential
+from keras.layers import Activation, Dense, Dropout, Flatten
+from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D, Input
+from keras.layers import GlobalMaxPooling2D, GlobalAveragePooling2D
 from keras.layers.merge import Concatenate
 from keras.models import Model
 from keras.optimizers import Adam
@@ -37,13 +43,6 @@ def bn_pooling(x, k=2, s=2, m=0):
 ############################################################################
 
 
-import numpy as np
-import random as rand
-import math
-from keras.models import Sequential
-from keras.layers import Activation, Dense, Dropout, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
-from keras.layers.normalization import BatchNormalization
 
 
 class GenomeHandler:
@@ -231,9 +230,11 @@ def get_models():
     gs2 = [list(map(int, l.split(":")[-1].split(",")[:-2])) for l in txt2.splitlines()]
     
     for g in gs:
+        print(g)
         models.append(gh.decode(g))
     for g in gs2:
-        models.append(gh.decode(g))
+        print(g)
+        models.append(gh2.decode(g))
     return models
     
     
@@ -300,6 +301,54 @@ def get_model(img_shape=(75, 75, 2), num_classes=1, f=8, h=128):
     
     return model
 
+
+def model1():
+    inp = Input(shape=(75,75,2))
+
+    x = Conv2D(256, (3,3), activation='relu')(inp)
+    x = BatchNormalization()(x)
+    x = MaxPooling2D((2,2), strides=(2,2))(x)
+
+    x = Conv2D(16, (3,3), activation='sigmoid')(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.1)(x)
+    x = MaxPooling2D((2,2), strides=(2,2))(x)
+
+    x = Conv2D(256, (3,3), activation='relu')(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.25)(x)
+    x = MaxPooling2D((2,2), strides=(2,2))(x)
+
+    x = Conv2D(64, (3,3), activation='sigmoid')(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.35)(x)
+    x = MaxPooling2D((2,2), strides=(2,2))(x)
+
+    x = GlobalAveragePooling2D()(x)
+    #x = Flatten()(x)
+
+    partial_model = Model(inp, x)
+
+    x = Dense(128, activation='sigmoid')(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.1)(x)
+
+    x = Dense(2, activation='softmax')(x)
+
+    model = Model(inp, x)
+    model.compile(loss="binary_crossentropy", optimizer=Adam(), metrics=['accuracy'])
+    return model, partial_model
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
-    model = get_model()
+    for model in get_models():
+        print(model.summary())
+
 
