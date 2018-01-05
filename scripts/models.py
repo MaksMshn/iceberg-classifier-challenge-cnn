@@ -302,7 +302,7 @@ def get_model(img_shape=(75, 75, 2), num_classes=1, f=8, h=128):
     return model
 
 
-def model1():
+def model0():
     inp = Input(shape=(75,75,2))
 
     x = Conv2D(256, (3,3), activation='relu')(inp)
@@ -341,14 +341,15 @@ def model1():
 
 
 
+from gen_models import *
 
-
-
+models = [model1, model2, model3, model4, model5, model6, model7, model8, model9, 
+model10, model11, model12, model13, model14]
 
 
 
 if __name__ == '__main__':
-    for model in get_models():
-        print(model.summary())
+    for model in models:
+        model()[0].summary()
 
 

@@ -209,8 +209,8 @@ def train(model, name):
 
 
 if __name__=='__main__':
-    #for model in models.get_models():
-    #    train(model)
-    train(models.model1()[0], models.model1.__name__)
+    for model in models.models:
+        train(model()[0], model.__name__)
+    #train(models.model1()[0], models.model1.__name__)
 
 
