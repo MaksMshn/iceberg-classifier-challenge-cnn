@@ -346,6 +346,38 @@ from gen_models import *
 models = [model1, model2, model3, model4, model5, model6, model7, model8, model9, 
 model10, model11, model12, model13, model14]
 
+def gen_combo_model(w1, w2):
+    m1 = load_model(w1)
+    m2 = load_model(w2)
+    inp1 = m1.input
+    inp2 = m2.input
+    out1 = m1.get_layer('global_average_pooling2d_1').output
+    out2 = m2.get_layer('global_average_pooling2d_1').output
+    m1_partial = Model(inp1, out1)
+    m2_partial = Model(inp2, out2)
+
+    input_shared = Input(shape=(75, 75, 2))
+
+    m1_out = m1_partial(input_shared)
+    m2_out = m2_partial(input_shared)
+
+    common = Concatenate()([m1_out, m2_out])
+    common = BatchNormalization()(common)
+    common = Dropout(0.3)(common)
+    common = Dense(512, activation='relu')(common)
+    common = Dropout(0.3)(common)
+    output = Dense(2, activation="softmax")(common)
+    model = Model(input_shared, output)
+    optimizer = Adam()
+
+    for l in m1_partial.layers:
+        l.trainable = False
+    for l in m2_partial.layers:
+        l.trainable = False
+
+    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+    return model
+
 
 
 if __name__ == '__main__':

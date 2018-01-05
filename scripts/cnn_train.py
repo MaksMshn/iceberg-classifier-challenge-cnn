@@ -163,8 +163,8 @@ def train(model, name):
         
         model.compile(optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
         #call backs
-        earlystop = EarlyStopping(monitor='val_loss', patience=10, verbose=1, min_delta=1e-4)
-        reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=40, verbose=1, epsilon=1e-4)
+        earlystop = EarlyStopping(monitor='val_loss', patience=17, verbose=1, min_delta=1e-4)
+        reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=15, verbose=1, epsilon=1e-4)
         model_chk = ModelCheckpoint(monitor='val_loss', filepath=weights_file, save_best_only=True, save_weights_only=False)
         
         callbacks = [earlystop, reduce_lr_loss, model_chk]
@@ -209,8 +209,20 @@ def train(model, name):
 
 
 if __name__=='__main__':
-    for model in models.models:
-        train(model()[0], model.__name__)
+    ws = ["../weights/weights_model0_2018-01-04-13-00.hdf5",
+"../weights/weights_model1_2018-01-05-16-21.hdf5",
+"../weights/weights_model2_2018-01-05-16-48.hdf5",
+"../weights/weights_model3_2018-01-05-17-07.hdf5",
+"../weights/weights_model4_2018-01-05-17-23.hdf5",]
+    for w1 in ws:
+        for w2 in ws:
+            if w1!=w2:
+                w1_name = w1.split('_')[1]
+                w2_name = w2.split('_')[1]
+                name = 'combo_{}_{}_notr'.format(w1_name, w2_name)
+                train(models.gen_combo_model(w1,w2), name) 
+    #for model in models.models:
+    #    train(model()[0], model.__name__)
     #train(models.model1()[0], models.model1.__name__)
 
 
