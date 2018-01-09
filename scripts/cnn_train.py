@@ -19,16 +19,14 @@ import datetime as dt
 #
 from random import shuffle, uniform, seed
 #evaluation
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import train_test_split
 #from sklearn.metrics import log_loss
 #
 from keras.optimizers import Adam, SGD
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, LambdaCallback
 #
-import augmentations as aug
-import utils
+from augmentations import augment
 import models
-import params
 
 ###############################################################################
 
@@ -37,201 +35,166 @@ def log_loss(t, p):
     return np.mean(h_tp)
 
 
-def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augment={}, opt_shuffle=True):
-    
+def data_generator(data,
+                   meta_data,
+                   labels,
+                   **config):
+
     indices = [i for i in range(len(labels))]
-    loop=0 
+    use_meta = config.get('use_meta', False)
+    batch_size = config.get('batch_size', 16)
+
     while True:
-        
-        if opt_shuffle:
-            shuffle(indices)
-        
+
         x_data = np.copy(data)
-        #x_meta_data = np.copy(meta_data)
+        if use_meta:
+            x_meta_data = np.copy(meta_data)
         x_labels = np.copy(labels)
-        
+
         for start in range(0, len(labels), batch_size):
             end = min(start + batch_size, len(labels))
             sel_indices = indices[start:end]
-            
+
             #select data
             data_batch = x_data[sel_indices]
-            #xm_batch = x_meta_data[sel_indices]
+            if use_meta:
+                xm_batch = x_meta_data[sel_indices]
             y_batch = x_labels[sel_indices]
 
             x_batch = []
-            
+
             for x in data_batch:
-                 
-                #augment                               
-                if augment.get('Rotate', False):
-                    x = aug.Rotate(x, u=0.2, v=np.random.random())
-                    x = aug.Rotate90(x, u=0.999, v=np.random.random())
-
-                if augment.get('Shift', False):
-                    x = aug.Shift(x, u=0.05, v=np.random.random())
-
-                if augment.get('Zoom', False):
-                    x = aug.Zoom(x, u=0.05, v=np.random.random())
-
-                if augment.get('Flip', False):
-                    x = aug.HorizontalFlip(x, u=0.5, v=np.random.random())
-                    x = aug.VerticalFlip(x, u=0.5, v=np.random.random())
-
-                if augment.get('Noise', False):
-                    x = aug.Noise(x, u=0.5, v=np.random.random())
-
+                x = augment(x, **config)
                 x_batch.append(x)
 
-                
             x_batch = np.array(x_batch, dtype=np.float32)
-            
-            #yield [x_batch, xm_batch], y_batch
-            loop += 1
-            yield x_batch, y_batch
-            
+
+            if use_meta:
+                yield [x_batch, xm_batch], y_batch
+            else:
+                yield x_batch, y_batch
+
 
 ###############################################################################
-def train(model, name):
+def train(dataset,
+          model,
+          **config):
+    """ 
+    dataset:  (y_train, X_train, X_meta), ]
+    """
     np.random.seed(1017)
-    target = 'is_iceberg'
-    
-    #Load data
-    train, train_bands = utils.read_jason(file='train.json', loc='../input/')
-    test, test_bands = utils.read_jason(file='test.json', loc='../input/')
-    
-    #target
-    train_y = train[target].values
-    # modify y, not needed originally
-    from keras.utils import to_categorical
-    train_y = to_categorical(train_y)
-    train_y = np.clip(train_y, .01, .99)
 
-    split_indices = train[target].values.copy()
-    
-    #data set
-    train_X = utils.rescale(train_bands)
-    train_meta = train['inc_angle'].values
-    test_X_dup = utils.rescale(test_bands)
-    test_meta = test['inc_angle'].values
+    name = config.get('name', 'unnamed')
+    epochs = config.get('epochs', 250)
+    batch_size = config.get('batch_size', 32)
+    lr_patience = config.get('lr_patience', 15)
+    stop_patience = config.get('stop_patience', 50)
+    use_meta = config.get('use_meta', False)
+    full_cycls_per_epoch = config.get('full_cycls_per_epoch', 8)
+    tmp = config.get('tmp')
 
-    #training keras
-    #model
-    nb_filters = params.nb_filters
-    nb_dense = params.nb_dense
-    tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    (labels, data, meta) = dataset
+
     weights_file = os.path.join("../weights/weights_{}_{}.hdf5".format(name, tmp))
-    #model = models.get_model(img_shape=(75, 75, 2), f=nb_filters, h=nb_dense)
-    weights_init = params.weights_init
-    model.save(weights_init)
+
     #training
-    epochs = params.epochs
-    batch_size = params.batch_size
     print('epochs={}, batch={}'.format(epochs, batch_size), flush=True)
-    opt_augments = {'Flip': False, 'Rotate': False, 'Shift': False, 'Zoom': False}
-    opt_augments['Flip'] = True
-    opt_augments['Rotate'] = True
-    opt_augments['Shift'] = True
-    opt_augments['Zoom'] = True  
-    opt_augments['Noise'] = True
-    print(opt_augments)
 
     #train, validataion split
-    test_ratio = 0.159
-    nr_runs = 1
-    split_seed = 25
-    kf = StratifiedShuffleSplit(n_splits=nr_runs, test_size=test_ratio, train_size=None, random_state=split_seed)
+    test_ratio = 0.15
+    split_seed = 27
 
-    #training, evaluation, test and make submission
-    for r, (train_index, valid_index) in enumerate(kf.split(train, split_indices)):
+    X_train, X_test, Xm_train, Xm_test, y_train, y_test = train_test_split(
+        data, meta, labels, test_size=test_ratio, random_state=split_seed)
 
-        tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M")
-        
-        y1, y2 = train_y[train_index], train_y[valid_index]
-        x1, x2 = train_X[train_index], train_X[valid_index]
-        xm1, xm2 = train_meta[train_index], train_meta[valid_index]
+    print('splitted: {0}, {1}'.format(X_train.shape, X_test.shape), flush=True)
+    print('splitted: {0}, {1}'.format(y_train.shape, y_test.shape), flush=True)
 
-        print('splitted: {0}, {1}'.format(x1.shape, x2.shape), flush=True)
-        print('splitted: {0}, {1}'.format(y1.shape, y2.shape), flush=True)
-        ################################
-        if r > 0:
-            model.load_weights(weights_init)
-        
-        #optim = SGD(lr=0.005, momentum=0.0, decay=0.002, nesterov=True)
-        optim = Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.002)
-        
-        model.compile(optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
-        #call backs
-        earlystop = EarlyStopping(monitor='val_loss', patience=17, verbose=1, min_delta=1e-4)
-        reduce_lr_loss = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=15, verbose=1, epsilon=1e-4)
-        model_chk = ModelCheckpoint(monitor='val_loss', filepath=weights_file, save_best_only=True, save_weights_only=False)
-        
-        callbacks = [earlystop, reduce_lr_loss, model_chk]
-        ##########
-       
-        model.fit_generator(generator=data_generator(x1, xm1, y1, batch_size=batch_size, augment=opt_augments),
-                            steps_per_epoch= np.ceil(8.0 * float(len(y1)) / float(batch_size)),
-                            epochs=epochs,
-                            verbose=2,
-                            callbacks=callbacks,
-                            validation_data=data_generator(x2, xm2, y2, batch_size=batch_size, augment=opt_augments),
-                            validation_steps=np.ceil(8.0 * float(len(y2)) / float(batch_size)))
+    #call backs
+    earlystop = EarlyStopping(
+        monitor='val_loss', patience=stop_patience, verbose=1, min_delta=1e-4)
+    reduce_lr_loss = ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.1,
+        patience=lr_patience,
+        verbose=1,
+        epsilon=1e-4)
+    model_chk = ModelCheckpoint(
+        monitor='val_loss',
+        filepath=weights_file,
+        save_best_only=True,
+        save_weights_only=False)
+    flush_logger = LambdaCallback(on_epoch_end=\
+        lambda epoch, logs: print(
+            'Epoch: {}, '.format(epoch) + \
+                ', '.join('{}: {:.4f}'.format(k, v) if v > 1e-3 else '{}: {:.4e}'.format(k, v)
+                           for k, v in logs.items()),
+            flush=True))
+
+    callbacks = [earlystop, reduce_lr_loss, model_chk, flush_logger]
+    ##########
+
+    model.fit_generator(
+        generator=data_generator(
+            X_train,
+            Xm_train,
+            y_train,
+            **config),
+        steps_per_epoch=np.ceil(full_cycls_per_epoch * len(y_train) /(batch_size)),
+        epochs=epochs,
+        verbose=0,
+        callbacks=callbacks,
+        validation_data=(X_test,y_test))
+
+    model.load_weights(weights_file)
+
+    if use_meta:
+        loss_val, acc_val = model.evaluate(
+            [[X_test, Xm_test], y_test], batch_size=batch_size, verbose=0)
+        loss_tr, acc_tr = model.evaluate(
+            [[X_train, Xm_train], y_train], batch_size=batch_size, verbose=0)
+    else:
+        loss_val, acc_val = model.evaluate(
+            X_test, y_test, batch_size=batch_size, verbose=0)
+        loss_tr, acc_tr = model.evaluate(
+            X_train, y_train, batch_size=batch_size, verbose=0)
+
+    print(
+        '\n\nLoss/Acc in validation data: {:.5f}/{:.5f}'.format(loss_val, acc_val),
+        flush=True)
+    print(
+        'Loss/Acc in training data: {:.5f}/{:.5f}\n'.format(loss_tr, acc_tr),
+        flush=True)
+
+    return model
 
 
-        if os.path.isfile(weights_file):
+def evaluate(model, dataset, target='is_iceberg', **config):
+    use_meta = config.get('use_meta', False)
+    batch_size = config.get('batch_size', 16)
+    name = config.get('name', 'unnamed')
+    tmp = config.get('tmp')
 
-            model.load_weights(weights_file)
-            
-            #p = model.predict([x2, xm2], batch_size=batch_size, verbose=1)
-            p = model.predict(x2, batch_size=batch_size, verbose=2)
-            print('\n\nEvaluate loss in validation data: {}'.format(log_loss(y2[:,1], p[:,1])), flush=True)
+    test_idx, test, test_meta = dataset
 
-            #p = model.predict([x1, xm1], batch_size=batch_size, verbose=1)
-            p = model.predict(x1, batch_size=batch_size, verbose=2)
-            print('\n\nEvaluate loss in training data: {}'.format(log_loss(y1[:,1], p[:,1])), flush=True)
-            
-            print('\nPredict...', flush=True)
-            ids = test['id'].values
+    print('\nPredict...', flush=True)
 
-            #prediction
-            #pred = model.predict([test_X_dup, test_meta], batch_size=batch_size, verbose=1)
-            pred = model.predict(test_X_dup, batch_size=batch_size, verbose=2)
-            #pred = np.squeeze(pred, axis=-1)
-            pred = np.clip(pred[:,1], .01, .99)
-            
-            file = 'subm_{}_f{:03d}.csv'.format(tmp, nb_filters)
-            model_file = 'subm_{}_model.txt'.format(tmp)
-            with open('../submit/{}'.format(model_file), 'w') as f:
-                model.summary(print_fn=lambda x: f.write(x + '\n'))
-            subm = pd.DataFrame({'id': ids, target: pred})
-            print('Saving submission file: {}'.format(file))
-            subm.to_csv('../submit/{}'.format(file), index=False, float_format='%.6f')
+    if use_meta:
+        pred = model.predict([test, test_meta], batch_size=batch_size, verbose=2)
+    else:
+        pred = model.predict(test, batch_size=batch_size, verbose=2)
+
+    pred = np.squeeze(pred)
+
+    file = 'subm_{}_{}.csv'.format(tmp, name)
+    model_file = 'subm_{}_{}_model.txt'.format(tmp, name)
+    with open('../submit/{}'.format(model_file), 'w') as f:
+        model.summary(print_fn=lambda x: f.write(x + '\n'))
+
+    subm = pd.DataFrame({'id': test_idx, target: pred})
+    print('Saving submission file: {}'.format(file))
+    subm.to_csv('../submit/{}'.format(file), index=False, float_format='%.6f')
 
 
 if __name__=='__main__':
-    #ws = ["../weights/weights_model0_2018-01-04-13-00.hdf5",
-#"../weights/weights_model1_2018-01-05-16-21.hdf5",
-#"../weights/weights_model2_2018-01-05-16-48.hdf5",
-#"../weights/weights_model3_2018-01-05-17-07.hdf5",
-#"../weights/weights_model4_2018-01-05-17-23.hdf5",]
-    #for w1 in ws:
-    #    for w2 in ws:
-    #        if w1!=w2:
-    #            w1_name = w1.split('_')[1]
-    #            w2_name = w2.split('_')[1]
-    #            name = 'combo_{}_{}_notr'.format(w1_name, w2_name)
-    #            train(models.gen_combo_model(w1,w2), name) 
-    #for model in models.models:
-    #    train(model()[0], model.__name__)
-    #train(models.model1()[0], models.model1.__name__)
-    import glob, os
-    ws = glob.glob("../weights/*model*model*hdf5")
-    for w in ws:
-        print(w)
-        name = os.path.split(w)[1]
-        name = '_'.join(name.split('_')[1:5])
-        m = models.retrain_model(w)
-        name = name.replace('notr', 'tr')
-        train(m, name)
-    
-
+    print('Run from another script!')
