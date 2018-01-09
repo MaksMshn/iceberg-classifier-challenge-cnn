@@ -17,7 +17,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers import Conv2D, MaxPooling2D, Input
 from keras.layers import GlobalMaxPooling2D, GlobalAveragePooling2D
 from keras.layers.merge import Concatenate
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.optimizers import Adam
 
 
@@ -351,8 +351,8 @@ def gen_combo_model(w1, w2):
     m2 = load_model(w2)
     inp1 = m1.input
     inp2 = m2.input
-    out1 = m1.get_layer('global_average_pooling2d_1').output
-    out2 = m2.get_layer('global_average_pooling2d_1').output
+    out1 = [l for l in m1.layers if l.name.startswith('global_average_pooling2d')][0].output
+    out2 = [l for l in m2.layers if l.name.startswith('global_average_pooling2d')][0].output
     m1_partial = Model(inp1, out1)
     m2_partial = Model(inp2, out2)
 
@@ -378,6 +378,17 @@ def gen_combo_model(w1, w2):
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
+
+def retrain_model(w):
+    m = load_model(w)
+    for l in m.layers:
+        if l.name.startswith('model'):
+            for l in l.layers:
+                l.trainable = True
+        else:
+            l.trainable = True
+    m.compile(loss='binary_crossentropy', optimizer=Adam())
+    return m
 
 
 if __name__ == '__main__':

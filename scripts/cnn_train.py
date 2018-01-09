@@ -88,7 +88,6 @@ def data_generator(data=None, meta_data=None, labels=None, batch_size=16, augmen
             
             #yield [x_batch, xm_batch], y_batch
             loop += 1
-            print('Generator loop: {}'.format(loop))
             yield x_batch, y_batch
             
 
@@ -196,7 +195,7 @@ def train(model, name):
 
             #prediction
             #pred = model.predict([test_X_dup, test_meta], batch_size=batch_size, verbose=1)
-            pred = model.predict(test_X_dup, batch_size=batch_size, verbose=1)
+            pred = model.predict(test_X_dup, batch_size=batch_size, verbose=2)
             #pred = np.squeeze(pred, axis=-1)
             pred = np.clip(pred[:,1], .01, .99)
             
@@ -205,24 +204,34 @@ def train(model, name):
             with open('../submit/{}'.format(model_file), 'w') as f:
                 model.summary(print_fn=lambda x: f.write(x + '\n'))
             subm = pd.DataFrame({'id': ids, target: pred})
+            print('Saving submission file: {}'.format(file))
             subm.to_csv('../submit/{}'.format(file), index=False, float_format='%.6f')
 
 
 if __name__=='__main__':
-    ws = ["../weights/weights_model0_2018-01-04-13-00.hdf5",
-"../weights/weights_model1_2018-01-05-16-21.hdf5",
-"../weights/weights_model2_2018-01-05-16-48.hdf5",
-"../weights/weights_model3_2018-01-05-17-07.hdf5",
-"../weights/weights_model4_2018-01-05-17-23.hdf5",]
-    for w1 in ws:
-        for w2 in ws:
-            if w1!=w2:
-                w1_name = w1.split('_')[1]
-                w2_name = w2.split('_')[1]
-                name = 'combo_{}_{}_notr'.format(w1_name, w2_name)
-                train(models.gen_combo_model(w1,w2), name) 
+    #ws = ["../weights/weights_model0_2018-01-04-13-00.hdf5",
+#"../weights/weights_model1_2018-01-05-16-21.hdf5",
+#"../weights/weights_model2_2018-01-05-16-48.hdf5",
+#"../weights/weights_model3_2018-01-05-17-07.hdf5",
+#"../weights/weights_model4_2018-01-05-17-23.hdf5",]
+    #for w1 in ws:
+    #    for w2 in ws:
+    #        if w1!=w2:
+    #            w1_name = w1.split('_')[1]
+    #            w2_name = w2.split('_')[1]
+    #            name = 'combo_{}_{}_notr'.format(w1_name, w2_name)
+    #            train(models.gen_combo_model(w1,w2), name) 
     #for model in models.models:
     #    train(model()[0], model.__name__)
     #train(models.model1()[0], models.model1.__name__)
-
+    import glob, os
+    ws = glob.glob("../weights/*model*model*hdf5")
+    for w in ws:
+        print(w)
+        name = os.path.split(w)[1]
+        name = '_'.join(name.split('_')[1:5])
+        m = models.retrain_model(w)
+        name = name.replace('notr', 'tr')
+        train(m, name)
+    
 
