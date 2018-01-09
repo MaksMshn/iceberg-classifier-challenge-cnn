@@ -156,7 +156,7 @@ def create_dataset(frame,
 y_train, X_b, X_images = create_dataset(train, True)
 
 
-def get_model_notebook(lr, decay, channels, relu_type='relu'):
+def get_model_notebook(lr, channels, relu_type='relu', decay=1.e-6):
     # angle variable defines if we should use angle parameter or ignore it
     input_1 = Input(shape=(75, 75, channels))
 
@@ -203,36 +203,6 @@ def get_model_notebook(lr, decay, channels, relu_type='relu'):
     return model, partial_model
 
 
-def combined_model(m_b, m_img, lr, decay):
-    input_b = Input(shape=(75, 75, 3))
-    input_img = Input(shape=(75, 75, 3))
-
-    # I've never tested non-trainable source models tho
-    #for layer in m_b.layers:
-    #    layer.trainable = False
-    #for layer in m_img.layers:
-    #    layer.trainable = False
-
-    m1 = m_b(input_b)
-    m2 = m_img(input_img)
-
-    # So, combine models and train perceptron based on that
-    # The iteresting idea is to use XGB for this task, but i actually hate this method
-    common = Concatenate()([m1, m2])
-    common = BatchNormalization()(common)
-    common = Dropout(0.3)(common)
-    common = Dense(1024, activation='relu')(common)
-    common = Dropout(0.3)(common)
-    common = Dense(512, activation='relu')(common)
-    common = Dropout(0.3)(common)
-    output = Dense(1, activation="sigmoid")(common)
-    model = Model([input_b, input_img], output)
-    optimizer = Adam(
-        lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=decay)
-    model.compile(
-        loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
-    return model
-
 
 def data_generator(data=None, labels=None, batch_size=16, data2=None):
 
@@ -240,11 +210,7 @@ def data_generator(data=None, labels=None, batch_size=16, data2=None):
     loop = 0
     while True:
 
-        second_channel = False
         x_data = np.copy(data)
-        if np.any(data2):
-            x_data2 = np.copy(data2)
-            second_channel = True
         x_labels = np.copy(labels)
 
         for start in range(0, len(labels), batch_size):
@@ -264,29 +230,11 @@ def data_generator(data=None, labels=None, batch_size=16, data2=None):
                 x = Zoom(x, u=0.15, v=np.random.random())
                 x = HorizontalFlip(x, u=0.5, v=np.random.random())
                 x = VerticalFlip(x, u=0.5, v=np.random.random())
-                x = Noise(x, u=0.4, v=np.random.random())
+                x = Noise(x, u=0.5, v=np.random.random())
                 x_batch.append(x)
             x_batch = np.array(x_batch, dtype=np.float32)
 
-            if second_channel:
-                data_batch2 = x_data2[sel_indices]
-                x_batch2 = []
-                for x in data_batch2:
-                    #augment
-                    x = Rotate(x, u=0.2, v=np.random.random())
-                    x = Rotate90(x, u=0.999, v=np.random.random())
-                    x = Shift(x, u=0.05, v=np.random.random())
-                    x = Zoom(x, u=0.05, v=np.random.random())
-                    x = HorizontalFlip(x, u=0.5, v=np.random.random())
-                    x = VerticalFlip(x, u=0.5, v=np.random.random())
-                    x = Noise(x, u=0.4, v=np.random.random())
-                    x_batch2.append(x)
-                x_batch2 = np.array(x_batch, dtype=np.float32)
-
-                yield [x_batch, x_batch], y_batch
-
-            else:
-                yield x_batch, y_batch
+            yield x_batch, y_batch
 
 
 def train_model(model,
@@ -311,6 +259,9 @@ def train_model(model,
     callbacks = [earlystop, reduce_lr_loss, model_chk]
 
     x_test, y_test = val_data
+    model.summary()
+    print('X_train, x_val', X_train.shape, x_test.shape, flush=True)
+    print('y_train, y_val', y_train.shape, y_test.shape, flush=True)
     try:
         model.fit_generator(
             data_generator(X_train, y_train, batch_size=batch_size),
@@ -329,9 +280,7 @@ def train_model(model,
     return model
 
 
-#Train a particular model
 def gen_model_weights(lr,
-                      decay,
                       channels,
                       relu,
                       batch_size,
@@ -339,15 +288,15 @@ def gen_model_weights(lr,
                       path_name,
                       data,
                       verbose=2):
-    X_train, y_train, X_test, y_test, X_val, y_val = data
-    model, partial_model = get_model_notebook(lr, decay, channels, relu)
+    X_train, y_train, X_val, y_val = data
+    model, partial_model = get_model_notebook(lr, channels, relu)
     model = train_model(
         model,
         batch_size,
         epochs,
         path_name,
         X_train,
-        y_train, (X_test, y_test),
+        y_train, (X_val, y_val),
         verbose=verbose)
 
     if verbose > 0:
@@ -355,117 +304,48 @@ def gen_model_weights(lr,
             X_val, y_val, verbose=0, batch_size=batch_size)
 
         loss_train, acc_train = model.evaluate(
-            X_test, y_test, verbose=0, batch_size=batch_size)
+            X_train, y_train, verbose=0, batch_size=batch_size)
 
         print('Val/Train Loss:', str(loss_val) + '/' + str(loss_train), \
             'Val/Train Acc:', str(acc_val) + '/' + str(acc_train))
     return model, partial_model
 
 
-# Train all 3 models
-def train_models(dataset,
-                 lr,
-                 batch_size,
-                 max_epoch,
-                 verbose=2):
-    y_train, X_b, X_images = dataset
-    y_train_full, y_val,\
-    X_b_full, X_b_val,\
-    X_images_full, X_images_val = train_test_split(y_train, X_b, X_images, random_state=687, train_size=0.9)
+def main(dataset, batch_size, max_epoch, tmp):
+    weights_name = '../weights/bandwidth_model_{}.hdf5'.format(tmp)
 
-    y_train, y_test, \
-    X_b_train, X_b_test, \
-    X_images_train, X_images_test = train_test_split(y_train_full, X_b_full, X_images_full, random_state=576, train_size=0.85)
+    y_train, X_b, X_images = dataset
+    y_train, y_val,\
+    X_train, X_val  = train_test_split(y_train, X_b, train_size=0.9)
 
     print('Training bandwidth network')
-    if train_band:
-        data_b1 = (X_b_train, y_train, X_b_test, y_test, X_b_val, y_val)
-        model_b, model_b_cut = gen_model_weights(
-          lr,
-          1e-6,
-          3,
-          'relu',
-          batch_size,
-          max_epoch,
-          '../weights/bandwidth_model.hdf5',
-          data=data_b1,
-          verbose=verbose)
-
-    #print('Training image network')
-    if train_img:
-        data_images = (X_images_train, y_train, X_images_test, y_test, X_images_val,
-                   y_val)
-        model_images, model_images_cut = gen_model_weights(
-          lr,
-          1e-6,
-          3,
-          'relu',
-          batch_size,
-          max_epoch,
-          '../weights/img_model.hdf5',
-          data_images,
-          verbose=verbose)
-
-    #common_model = combined_model(model_b_cut, model_images_cut, lr / 2, 1e-7)
-    #common_x_train = [X_b_full, X_images_full]
-    #common_y_train = y_train_full
-    #common_x_val = [X_b_val, X_images_val]
-    #common_y_val = y_val
-
-    #print('Training common network')
-    
-    #earlystop = EarlyStopping(
-    #    monitor='val_loss', patience=30, verbose=1, min_delta=1e-4)
-    #reduce_lr_loss = ReduceLROnPlateau(
-    #    monitor='val_loss', factor=0.1, patience=15, verbose=1, epsilon=1e-4)
-    #model_chk = ModelCheckpoint(
-    #    monitor='val_loss',
-    #    filepath='../weights/combined_model.hdf5',
-    #    save_best_only=True,
-    #    save_weights_only=False)
-
-    #callbacks = [earlystop, reduce_lr_loss, model_chk]
-    
-    if train_com:
-        try:
-            common_model.fit_generator(
-                data_generator(
-                    X_b_full,
-                    data2=X_images_full,
-                    labels=y_train_full,
-                    batch_size=batch_size),
-                epochs=max_epoch,
-                steps_per_epoch=np.ceil(
-                    8.0 * float(len(y_train)) / float(batch_size)),
-                validation_data=(common_x_val, common_y_val),
-                verbose=2,
-                callbacks=callbacks)
-        except KeyboardInterrupt:
-            pass
-
-    #common_model.load_weights(filepath='../weights/combined_model.hdf5',)
-    #loss_val, acc_val = common_model.evaluate(
-    #    common_x_val, common_y_val, verbose=0, batch_size=batch_size)
-    #loss_train, acc_train = common_model.evaluate(
-    #    common_x_train, common_y_train, verbose=0, batch_size=batch_size)
-    #if verbose > 0:
-    #    print('Loss:', loss_val, 'Acc:', acc_val)
-    #return common_model
+    data_b1 = (X_train, y_train, X_val, y_val)
+    model_b, model_b_cut = gen_model_weights(lr=1e-6, channels=3, relu='relu',
+          batch_size=batch_size,
+          epochs=max_epoch,
+          path_name=weights_name,
+          data=data_b1)
     return model_b
 
 
-common_model = train_models((y_train, X_b, X_images), 8e-5, 32, 250, 2)
+if __name__ == '__main__':
+    import datetime as dt
+    tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    batch_size = 32
+    epochs = 250
+    common_model = main((y_train, X_b, X_images), batch_size, epochs, tmp)
 
-print('Reading test dataset')
-test = pd.read_json("../input/test.json")
-y_fin, X_fin_b, X_fin_img = create_dataset(test, False)
-print('Predicting')
-prediction = common_model.predict(
-    X_fin_b, verbose=2, batch_size=32)
-print('Submitting')
-submission = pd.DataFrame({
-    'id': test["id"],
-    'is_iceberg': prediction.reshape((prediction.shape[0]))
-})
+    print('Reading test dataset')
+    test = pd.read_json("../input/test.json")
+    y_fin, X_fin_b, X_fin_img = create_dataset(test, False)
+    prediction = common_model.predict(X_fin_b, verbose=2, batch_size=32)
+    sub_name = '../submit/keras_018_wider_{}.csv'.format(tmp)
+    print('Submitting ' + sub_name)
+    submission = pd.DataFrame({
+        'id': test["id"],
+        'is_iceberg': prediction.reshape((prediction.shape[0]))
+    })
 
-submission.to_csv("../submit/common_model1.csv", index=False)
+    submission.to_csv(sub_name, index=False)
+
+
