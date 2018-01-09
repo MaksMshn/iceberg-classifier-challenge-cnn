@@ -69,7 +69,7 @@ def create_dataset(
     if labeled:
         y = np.array(df["is_iceberg"])
         if soft_val:
-            y = np.clip(1 - soft_val, soft_val, y)
+            y = np.clip(y, 1 - soft_val, soft_val)
     else:
         y = df.id
     return y, bands, df['inc_angle']

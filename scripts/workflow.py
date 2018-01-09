@@ -4,17 +4,19 @@ import json, time
 from utils import create_dataset
 from cnn_train import train, evaluate
 import models
+import sys
+
 
 
 ####  Hyperparameters ####
 
 
 config = {
-    'name': 'no_noise',
+    'name': 'vanilla_elu',
     # training
     'lr': 8e-5,
     'decay': 1e-6,
-    'relu_type': 'relu',
+    'relu_type': 'elu',
     'epochs': 250,
     'full_cycls_per_epoch': 8,
     'batch_size': 32,
@@ -24,23 +26,23 @@ config = {
     'hflip_prob': .5,
     'vflip_prob': .5,
     'rot90_prob': .999,
-    'rot_prob': .16,
-    'rotate_rg': 20,
-    'shift_prob': .2,
+    'rot_prob': .2,
+    'rotate_rg': 10,
+    'shift_prob': .1,
     'shift_width_rg': .1,
     'shift_height_rg': .1,
-    'zoom_prob': .3,
-    'zoom_rg': (.6, 1.4),
-    'noise_prob': .001,
+    'zoom_prob': .15,
+    'zoom_rg': (1.1, 1.1),
+    'noise_prob': .4,
     'noise_rg': .02,
     # model
     'use_meta': False,
-    'model_fn': 'model0',
+    'model_fn': 'model1_wider',
     # preprocessing
     'preproc_strat': 'band3',
     'inc_angle_fill': -1,
-    'band3_op': 'lambda x1, x2: (x1+x2)/2',
-    'soft_targets': False,
+    'band3_op': 'lambda x1, x2: x1-x2',
+    'soft_targets': True,
     'soft_val': 0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
 }
 
@@ -56,6 +58,12 @@ def runtime(start):
 
 if __name__ == '__main__':
     start = time.time()
+
+    if len(sys.argv) > 1 and sys.argv[1].endswith('json'):
+        with open(sys.argv[1]) as f:
+            config = json.load(f)
+        print('Using loaded config from: {}'.format(sys.argv[1]))
+        print(json.dumps(config, indent=2))
 
     model_fn = getattr(models, config['model_fn'])
     model = model_fn(**config)

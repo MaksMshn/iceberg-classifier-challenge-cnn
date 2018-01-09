@@ -99,6 +99,56 @@ def model0(**config):
     return model
 
 
+def model1_wider(**config):
+    """ Bandwidth model from the kernel keras0.18lb - managed to 
+    produce 0.16 when trained with data augumentation."""
+
+    lr = config.get('lr', 8e-5)
+    decay = config.get('decay', 1e-6)
+    relu_type = config.get('relu_type', 'relu')
+
+    input_1 = Input(shape=(75, 75, 3))
+
+    fcnn = BatchNormalization()(input_1)
+    fcnn = Conv2D(32, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((3, 3))(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+
+    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+    fcnn = Dropout(0.1)(fcnn)
+
+    fcnn = Conv2D(256, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+    fcnn = Dropout(0.2)(fcnn)
+
+    fcnn = Conv2D(128, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+    fcnn = Dropout(0.2)(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+
+    fcnn = Flatten()(fcnn)
+
+    dense = Dropout(0.2)(fcnn)
+    dense = Dense(256, activation=relu_type)(dense)
+    dense = Dropout(0.2)(dense)
+    dense = Dense(128, activation=relu_type)(dense)
+    dense = Dropout(0.2)(dense)
+    dense = Dense(64, activation=relu_type)(dense)
+    dense = Dropout(0.2)(dense)
+
+    output = Dense(1, activation="sigmoid")(dense)
+
+    model = Model(input_1, output)
+
+    optim = Adam(lr=lr, decay=decay)
+    model.compile(
+        optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
+    return model
+
+
+
 models = [model0]
 
 if __name__ == '__main__':
