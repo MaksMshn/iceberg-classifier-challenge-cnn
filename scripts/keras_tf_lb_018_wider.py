@@ -29,6 +29,9 @@ from random import choice
 import cv2
 import keras.preprocessing.image as prep
 
+train_band = True
+train_img = False
+train_com = False
 
 
 #data augmentations
@@ -96,6 +99,22 @@ def Noise(image, noise_rg=0.02, u=0.5, v=1.0):
     return image
 
 
+# Translate data to an image format
+def color_composite(data):
+    rgb_arrays = []
+    for i, row in data.iterrows():
+        band_1 = np.array(row['band_1']).reshape(75, 75)
+        band_2 = np.array(row['band_2']).reshape(75, 75)
+        band_3 = band_1 / band_2
+
+        r = (band_1 + abs(band_1.min())) / np.max((band_1 + abs(band_1.min())))
+        g = (band_2 + abs(band_2.min())) / np.max((band_2 + abs(band_2.min())))
+        b = (band_3 + abs(band_3.min())) / np.max((band_3 + abs(band_3.min())))
+
+        rgb = np.dstack((r, g, b))
+        rgb_arrays.append(rgb)
+    return np.array(rgb_arrays)
+
 
 train = pd.read_json("../input/train.json")
 
@@ -106,8 +125,8 @@ def create_dataset(frame,
                    smooth_gray=0.5,
                    weight_rgb=0.05,
                    weight_gray=0.05):
-    band_1, band_2 = frame['band_1'].values, frame[
-        'band_2'].values
+    band_1, band_2, images = frame['band_1'].values, frame[
+        'band_2'].values, color_composite(frame)
 
     to_arr = lambda x: np.asarray([np.asarray(item) for item in x])
     band_1 = to_arr(band_1)
@@ -120,14 +139,21 @@ def create_dataset(frame,
     band_2 = gray_reshape(band_2)
     band_3 = gray_reshape(band_3)
 
+    print('RGB done')
+    tf_reshape = lambda x: np.asarray([item.reshape(75, 75, 1) for item in x])
+    band_1 = tf_reshape(band_1)
+    band_2 = tf_reshape(band_2)
+    band_3 = tf_reshape(band_3)
     #images = tf_reshape(images)
-    band = np.stack([band_1, band_2, band_3], axis=3)
+    band = np.concatenate([band_1, band_2, band_3], axis=3)
     if labeled:
         y = np.array(frame["is_iceberg"])
     else:
         y = None
-    return y, band
+    return y, band, images
 
+
+y_train, X_b, X_images = create_dataset(train, True)
 
 
 def get_model_notebook(lr, channels, relu_type='relu', decay=1.e-6):
@@ -148,11 +174,6 @@ def get_model_notebook(lr, channels, relu_type='relu', decay=1.e-6):
     fcnn = Conv2D(128, kernel_size=(3, 3), activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = Dropout(0.2)(fcnn)
-
-    fcnn = Conv2D(256, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
-    #fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
-    fcnn = Dropout(0.2)(fcnn)
-    fcnn = BatchNormalization()(fcnn)
 
     fcnn = Conv2D(256, kernel_size=(3, 3), activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
@@ -290,7 +311,7 @@ def gen_model_weights(lr,
 def main(dataset, batch_size, max_epoch, tmp):
     weights_name = '../weights/bandwidth_model_{}.hdf5'.format(tmp)
 
-    y_train, X_b = dataset
+    y_train, X_b, X_images = dataset
     y_train, y_val,\
     X_train, X_val  = train_test_split(y_train, X_b, train_size=0.9)
 
@@ -309,12 +330,11 @@ if __name__ == '__main__':
     tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M")
     batch_size = 32
     epochs = 250
-    y_train, X_b = create_dataset(train, True)
-    common_model = main((y_train, X_b), batch_size, epochs, tmp)
+    common_model = main((y_train, X_b, X_images), batch_size, epochs, tmp)
 
     print('Reading test dataset')
     test = pd.read_json("../input/test.json")
-    y_fin, X_fin_b = create_dataset(test, False)
+    y_fin, X_fin_b, X_fin_img = create_dataset(test, False)
     prediction = common_model.predict(X_fin_b, verbose=2, batch_size=32)
     sub_name = '../submit/keras_018_wider_{}.csv'.format(tmp)
     print('Submitting ' + sub_name)
