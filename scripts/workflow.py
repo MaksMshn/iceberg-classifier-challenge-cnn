@@ -35,7 +35,7 @@ def parase_arguments(argv):
         '--load',
         help="""Load specified model instead of using built ins.""")
     parser.add_argument(
-        '-n', '--name', help="""Set model name.""", default='unnamed')
+        '-n', '--name', help="""Set model name.""")
     # some useful model configurations
     parser.add_argument('--activation', help="""Activatio name.""")
     parser.add_argument('--epochs', help="""Number of epochs.""", type=int)
@@ -261,7 +261,7 @@ if __name__ == '__main__':
     args = parase_arguments(sys.argv[1:])
     # random iters are quite different from normal model behaviour
     if args.iters:
-        run_iterations(args.iters, args.name)
+        run_iterations(args.iters)
         sys.exit(0)
     if args.config:
         with open(args.config) as f:
@@ -273,7 +273,8 @@ if __name__ == '__main__':
         config['model_fn'] = args.load
     elif args.model_fn:
         config['model_fn'] = args.model_fn
-    config['name'] = args.name
+    if args.name:
+        config['name'] = args.name
     if args.activation:
         config['relu_type'] = args.activation
     if args.epochs:
