@@ -20,7 +20,7 @@ def gen_randomish_config():
         preproc_strat = 'band2'
     else:
         preproc_strat = 'band3'
-    
+
     return {
         'name': 'randomish_config',
         # training
@@ -151,14 +151,15 @@ if __name__ == '__main__':
             with open(sys.argv[1]) as f:
                 config = json.load(f)
             print('Using loaded config from: {}'.format(sys.argv[1]))
+            single_run(config)
         elif sys.argv[1].isnumeric():
             iters = int(sys.argv[1])
             for i in range(iters):
                 print('Starting iteration {}/{}\n\n'.format(i, iters))
                 single_run(gen_randomish_config())
                 print('config iteration completed!!!')
-                print('#'*40)
-                print('\n\n\n\n\n\n\n\n',flush=True)
+                print('#' * 40)
+                print('\n\n\n\n\n\n\n\n', flush=True)
 
     else:
         single_run(get_default_config())
