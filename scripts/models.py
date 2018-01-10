@@ -213,9 +213,11 @@ def model2_meta(**config):
     lr = config.get('lr', 8e-5)
     decay = config.get('decay', 1e-6)
     #relu_type = config.get('relu_type', 'relu')
-    relu_type = 'selu'
     channels = config.get('channels', 3)
     initializer = config.get('initializer', 'lecun_normal')
+    # set a few values
+    config['relu_type'] = 'selu'
+    config['use_meta'] = True
 
     input_1 = Input(shape=(75, 75, channels))
     fcnn = BatchNormalization()(input_1)
