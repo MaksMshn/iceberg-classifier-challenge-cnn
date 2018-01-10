@@ -177,7 +177,7 @@ def model1_meta(**config):
     fcnn = Dropout(0.2)(fcnn)
 
     fcnn = Conv2D(
-        128, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
+        128, kernel_size=(3, 3), activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = Dropout(0.2)(fcnn)
     fcnn = BatchNormalization()(fcnn)
@@ -190,6 +190,71 @@ def model1_meta(**config):
     fcnn = Concatenate()([fcnn, input_2_bn])
 
     dense = Dense(256, activation=relu_type)(fcnn)
+    dense = Dropout(0.2)(dense)
+    dense = Dense(128, activation=relu_type)(dense)
+    dense = Dropout(0.2)(dense)
+    dense = Dense(64, activation=relu_type)(dense)
+    dense = Dropout(0.2)(dense)
+
+    output = Dense(1, activation="sigmoid")(dense)
+
+    model = Model([input_1, input_2], output)
+
+    optim = Adam(lr=lr, decay=decay)
+    model.compile(
+        optimizer=optim, loss="binary_crossentropy", metrics=["accuracy"])
+    return model
+
+
+def model1_deeper(**config):
+    """ Bandwidth model from the kernel keras0.18lb - managed to 
+    produce 0.16 when trained with data augumentation."""
+
+    lr = config.get('lr', 8e-5)
+    decay = config.get('decay', 1e-6)
+    relu_type = config.get('relu_type', 'relu')
+    channels = config.get('channels', 3)
+
+    input_1 = Input(shape=(75, 75, channels))
+
+    fcnn = Conv2D(
+        32, kernel_size=(3, 3),
+        activation=relu_type)(BatchNormalization()(input_1))
+    fcnn = MaxPooling2D((3, 3))(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+
+    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+    fcnn = Dropout(0.1)(fcnn)
+
+    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+    fcnn = Dropout(0.1)(fcnn)
+
+    fcnn = Conv2D(128, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+    fcnn = Dropout(0.2)(fcnn)
+
+    fcnn = Conv2D(
+        128, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
+    fcnn = Dropout(0.2)(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+
+    fcnn = Conv2D(
+        128, kernel_size=(3, 3), activation=relu_type,)(fcnn)
+    fcnn = Dropout(0.2)(fcnn)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+    fcnn = BatchNormalization()(fcnn)
+
+    fcnn = Flatten()(fcnn)
+
+    input_2 = Input(shape=[1], name='angle')
+    input_2_bn = BatchNormalization()(input_2)
+
+    fcnn = Concatenate()([fcnn, input_2_bn])
+
+    dense = Dense(128, activation=relu_type)(fcnn)
     dense = Dropout(0.2)(dense)
     dense = Dense(128, activation=relu_type)(dense)
     dense = Dropout(0.2)(dense)
