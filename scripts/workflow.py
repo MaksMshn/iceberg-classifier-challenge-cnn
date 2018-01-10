@@ -38,6 +38,7 @@ def parase_arguments(argv):
     # some useful model configurations
     parser.add_argument('--activation', help="""Activatio name.""")
     parser.add_argument('--epochs', help="""Number of epochs.""", type=int)
+    parser.add_argument('--model_fn', help="""Specify type of model.""")
     parser.add_argument(
         '--pseudo', help="""Use pseudo labeling.""", action='store_true')
     return parser.parse_args(argv)
@@ -130,7 +131,7 @@ def gen_randomish_config(name=None):
 
 def get_default_config(cor_zoom=True):
     if cor_zoom:
-        zoom_rg = (1.1, 1.1)
+        zoom_rg = (.6, 1.4)
     else:
         zoom_rg = (.1, .1)
     return {
@@ -138,7 +139,7 @@ def get_default_config(cor_zoom=True):
         # training
         'lr': 8e-5,
         'decay': 1e-6,
-        'relu_type': 'relu',
+        'relu_type': 'elu',
         'epochs': 250,
         'full_cycls_per_epoch': 8,
         'batch_size': 32,
@@ -153,9 +154,9 @@ def get_default_config(cor_zoom=True):
         'shift_prob': .1,
         'shift_width_rg': .1,
         'shift_height_rg': .1,
-        'zoom_prob': .15,
+        'zoom_prob': .2,
         'zoom_rg': zoom_rg,
-        'noise_prob': .4,
+        'noise_prob': .3,
         'noise_rg': .02,
         # model
         'use_meta': False,
@@ -247,6 +248,8 @@ if __name__ == '__main__':
         config = get_default_config()
     if args.load:
         config['model_fn'] = args.load
+    elif args.model_fn:
+        config['model_fn'] = args.model_fn
     config['name'] = args.name
     if args.activation:
         config['relu_type'] = args.activation
