@@ -24,6 +24,7 @@ from sklearn.model_selection import train_test_split
 #
 from keras.optimizers import Adam, SGD
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, LambdaCallback
+import tensorflow as tf
 #
 from augmentations import augment
 import models
@@ -35,10 +36,7 @@ def log_loss(t, p):
     return np.mean(h_tp)
 
 
-def data_generator(data,
-                   meta_data,
-                   labels,
-                   **config):
+def data_generator(data, meta_data, labels, **config):
 
     indices = [i for i in range(len(labels))]
     use_meta = config.get('use_meta', False)
@@ -90,7 +88,8 @@ def predict(model, data, data_meta=None, **config):
     return np.squeeze(pred)
 
 
-def pseudo_generator(data, meta_data, labels, test, test_meta, model, **config):
+def pseudo_generator(data, meta_data, labels, test, test_meta, graph, model,
+                     **config):
 
     use_meta = config.get('use_meta', False)
     batch_size = config.get('batch_size', 16)
@@ -125,7 +124,8 @@ def pseudo_generator(data, meta_data, labels, test, test_meta, model, **config):
 
         # retrain every retrain_freq mini-epochs
         if retrain_freq > 0 and m_epoch % retrain_freq == 0:
-            pseudo = predict(model, test, test_meta, **config)
+            with graph.as_default():
+                pseudo = predict(model, test, test_meta, **config)
 
             if pseudo_type == 'hard':
                 pseudo = np.round(pseudo)
@@ -196,6 +196,8 @@ def train(dataset, model, **config):
 
     if pseudo:
         ((labels, data, meta), (_, test, test_meta)) = dataset
+        # per https://github.com/keras-team/keras/issues/2397#issuecomment-254919212
+        graph = tf.get_default_graph()
     else:
         (labels, data, meta) = dataset
 
@@ -229,7 +231,7 @@ def train(dataset, model, **config):
         patience=lr_patience,
         verbose=1,
         epsilon=1e-4,
-        min_lr=lr/1000)
+        min_lr=lr / 1000)
     model_chk = ModelCheckpoint(
         monitor='val_loss',
         filepath=weights_file,
@@ -248,7 +250,7 @@ def train(dataset, model, **config):
     if pseudo:
         model.fit_generator(
             generator=pseudo_generator(X_train, Xm_train, y_train, test,
-                                       test_meta, model, **config),
+                                       test_meta, graph, model, **config),
             steps_per_epoch=np.ceil(
                 full_cycls_per_epoch * len(y_train) / batch_size),
             epochs=epochs,

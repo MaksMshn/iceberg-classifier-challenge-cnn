@@ -243,7 +243,7 @@ if __name__ == '__main__':
     if args.config:
         with open(args.config) as f:
             config = json.load(f)
-        print('Using loaded config from: {}'.format(sys.argv[1]))
+        print('Using loaded config from: {}'.format(args.config))
     else:
         config = get_default_config()
     if args.load:
