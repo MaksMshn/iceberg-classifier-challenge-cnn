@@ -248,8 +248,8 @@ if __name__ == '__main__':
         config['relu_type'] = args.activation
     if args.epochs:
         config['epochs'] = args.epochs
-    # perhaps get rid of the default?
-    config['pseudo_train'] = args.pseudo
+    if args.pseudo:
+        config['pseudo_train'] = args.pseudo
     if args.evaluate:
         single_run(config, training=False)
     else:
