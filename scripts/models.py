@@ -226,7 +226,7 @@ def model2_meta(**config):
         activation=relu_type,
         kernel_initializer=initializer)(fcnn)
     fcnn = MaxPooling2D((3, 3))(fcnn)
-    fcnn = BatchNormalization()(fcnn)
+    fcnn_1 = BatchNormalization()(fcnn)
 
     #Path 1
     fcnn = Conv2D(
@@ -260,7 +260,7 @@ def model2_meta(**config):
         64,
         kernel_size=(3, 3),
         activation=relu_type,
-        kernel_initializer=initializer)(fcnn_2)
+        kernel_initializer=initializer)(fcnn_1)
     fcnn = AlphaDropout(0.2)(fcnn)
     fcnn_2 = BatchNormalization()(fcnn_2)
 

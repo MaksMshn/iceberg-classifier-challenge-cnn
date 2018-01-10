@@ -265,7 +265,7 @@ def train(dataset, model, **config):
             callbacks=callbacks,
             validation_data=valid_data)
 
-    model.load_weights(weights_file)
+    model.load_weights(model_w_name)
 
     if use_meta:
         loss_val, acc_val = model.evaluate(
@@ -287,13 +287,15 @@ def train(dataset, model, **config):
         flush=True)
 
     train_preds = predict(model, data, meta, **config)
-    train_log = {'preds': list(train_preds),
-                 'labels': list(labels),
-                 'meta': list(meta),
-                 'val_loss': float(loss_val),
-                 'val_acc': float(acc_val)
-                 'tr_loss':float(loss_tr),
-                 'tr_acc':float(acc_tr)}
+    train_log = {
+        'preds': list(train_preds),
+        'labels': list(labels),
+        'meta': list(meta),
+        'val_loss': float(loss_val),
+        'val_acc': float(acc_val),
+        'tr_loss': float(loss_tr),
+        'tr_acc': float(acc_tr)
+    }
     with open(out_name, 'w') as f:
         json.dump(train_log, f)
     print('Training output saved to: {}'.format(out_name))

@@ -53,11 +53,12 @@ def gen_randomish_config(name=None):
     name = name or 'fast_randomish_config'
     if random.random() < 0.25:
         configs = glob.glob('../config/config*json')
-        config = choise(configs)
+        config = choice(configs)
         config['pseudo_train'] = True
         prev_tmp = config['tmp']
         prev_name = config['name']
-        prev_weights = "../weights/weights_{}_{}.hdf5".format(prev_name, prev_tmp)
+        prev_weights = "../weights/weights_{}_{}.hdf5".format(
+            prev_name, prev_tmp)
         if os.path.isfile(prev_weights):
             config['model_fn'] = prev_weights
             return config
@@ -118,10 +119,7 @@ def gen_randomish_config(name=None):
             'use_meta':
                 False,
             'model_fn':
-                choice([
-                    'model0', 'model0',
-                    'model1_meta', 'model2_meta')
-                ]),
+                choice(['model0', 'model0', 'model1_meta', 'model2_meta']),
             # preprocessing
             'preproc_strat':
                 preproc_strat,
@@ -139,7 +137,7 @@ def gen_randomish_config(name=None):
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
         return config
-    
+
 
 
 def get_default_config(cor_zoom=True):
@@ -218,9 +216,10 @@ def single_run(config, training=True):
     config['tmp'] = tmp
     config_name = '../config/config_{}_{}.json'.format(tmp, config['name'])
     output_name = '../output/out_{}_{}.json'.format(tmp, config['name'])
-    config['model_w_name'] = "../weights/weights_{}_{}.hdf5".format(name, tmp)
+    config['model_w_name'] = "../weights/weights_{}_{}.hdf5".format(
+        config['name'], tmp)
     config['output_name'] = output_name
-    
+
     print('Saving configuration file to: {}'.format(config_name), flush=True)
     print('and output file to: {}'.format(output_name), flush=True)
     with open(config_name, 'w') as f:
