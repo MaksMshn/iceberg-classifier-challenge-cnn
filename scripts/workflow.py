@@ -39,7 +39,7 @@ def parase_arguments(argv):
     parser.add_argument(
         '--activation', help="""Activatio name.""", default='relu')
     parser.add_argument(
-        '--epochs', help="""Number of epochs.""", default='relu', type=int)
+        '--epochs', help="""Number of epochs.""", default=250, type=int)
     parser.add_argument(
         '--pseudo', help="""Use pseudo labeling.""", action='store_true')
     return parser.parse_args(argv)
