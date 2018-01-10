@@ -208,8 +208,12 @@ def single_run(config, training=True):
 
     if training:
         labels, data, meta = create_dataset('train.json', True, **config)
+        if config['pseudo_train']:
+            idxs, test, test_meta = create_dataset('test.json', False, **config)
+            dataset = ((labels, data, meta), (idxs, test, test_meta))
+        else:
+            dataset = (labels, data, meta)
         print('Data loaded after {}'.format(runtime(start)))
-        dataset = (labels, data, meta)
         model = train(dataset, model, **config)
         print('Model trained after {}'.format(runtime(start)))
 
