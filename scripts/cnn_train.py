@@ -16,6 +16,7 @@ import os
 import numpy as np # linear algebra
 import pandas as pd # data processing
 import datetime as dt
+import json
 #
 from random import shuffle, uniform, seed
 #evaluation
@@ -183,7 +184,6 @@ def train(dataset, model, **config):
     """
     np.random.seed(1017)
 
-    name = config.get('name', 'unnamed')
     epochs = config.get('epochs', 250)
     batch_size = config.get('batch_size', 32)
     lr = config.get('lr', 1.0e-4)
@@ -191,8 +191,9 @@ def train(dataset, model, **config):
     stop_patience = config.get('stop_patience', 50)
     use_meta = config.get('use_meta', False)
     full_cycls_per_epoch = config.get('full_cycls_per_epoch', 8)
-    tmp = config.get('tmp')
     pseudo = config.get('pseudo_train', False)
+    out_name = config.get('output_name')
+    model_w_name = config.get('model_w_name')
 
     if pseudo:
         ((labels, data, meta), (_, test, test_meta)) = dataset
@@ -200,9 +201,6 @@ def train(dataset, model, **config):
         graph = tf.get_default_graph()
     else:
         (labels, data, meta) = dataset
-
-    weights_file = os.path.join(
-        "../weights/weights_{}_{}.hdf5".format(name, tmp))
 
     #training
     print('epochs={}, batch={}'.format(epochs, batch_size), flush=True)
@@ -234,7 +232,7 @@ def train(dataset, model, **config):
         min_lr=lr / 1000)
     model_chk = ModelCheckpoint(
         monitor='val_loss',
-        filepath=weights_file,
+        filepath=model_w_name,
         save_best_only=True,
         save_weights_only=False)
     flush_logger = LambdaCallback(on_epoch_end=\
@@ -287,6 +285,18 @@ def train(dataset, model, **config):
     print(
         'Loss/Acc in training data: {:.5f}/{:.5f}\n'.format(loss_tr, acc_tr),
         flush=True)
+
+    train_preds = predict(model, data, meta, **config)
+    train_log = {'preds': list(train_preds),
+                 'labels': list(labels),
+                 'meta': list(meta),
+                 'val_loss': float(loss_val),
+                 'val_acc': float(acc_val)
+                 'tr_loss':float(loss_tr),
+                 'tr_acc':float(acc_tr)}
+    with open(out_name, 'w') as f:
+        json.dump(train_log, f)
+    print('Training output saved to: {}'.format(out_name))
 
     return model
 

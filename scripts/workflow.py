@@ -3,7 +3,8 @@ import json, time
 import numpy as np
 import random
 from random import choice
-import sys
+import glob
+import sys, os
 import argparse
 
 from utils import create_dataset
@@ -49,85 +50,96 @@ def parase_arguments(argv):
 
 
 def gen_randomish_config(name=None):
-    name = name or 'randomish_config'
-    shift_ranges = random.random() * .4
-    channels = choice([2, 3, 3])
-    if channels == 2:
-        preproc_strat = 'band2'
+    name = name or 'fast_randomish_config'
+    if random.random() < 0.25:
+        configs = glob.glob('../config/config*json')
+        config = choise(configs)
+        config['pseudo_train'] = True
+        prev_tmp = config['tmp']
+        prev_name = config['name']
+        prev_weights = "../weights/weights_{}_{}.hdf5".format(prev_name, prev_tmp)
+        if os.path.isfile(prev_weights):
+            config['model_fn'] = prev_weights
+            return config
+        else:
+            return None
     else:
-        preproc_strat = 'band3'
-
-    return {
-        'name':
-            name,
-        # training
-        'lr':
-            np.random.lognormal(sigma=0.5) * 8e-5,
-        'decay':
-            np.random.lognormal() * 1e-6,
-        'relu_type':
-            choice(['selu', 'relu', 'elu', 'elu', 'elu', 'elu']),
-        'epochs':
-            choice([150, 200, 225, 250, 275, 300, 500]),
-        'full_cycls_per_epoch':
-            8,
-        'batch_size':
-            choice([16, 32, 64]),
-        'lr_patience':
-            choice([10, 15, 25, 50, 100]),
-        'stop_patience':
-            choice([15, 25, 50, 60, 100]),
-        # data augmentation
-        'hflip_prob':
-            random.random(),
-        'vflip_prob':
-            random.random(),
-        'rot90_prob':
-            random.random() / 2 + 0.5,
-        'rot_prob':
-            random.random() / 2,
-        'rotate_rg':
-            random.random() * 45,
-        'shift_prob':
-            random.random() / 4,
-        'shift_width_rg':
-            shift_ranges,
-        'shift_height_rg':
-            shift_ranges,
-        'zoom_prob':
-            random.random() / 4,
-        'zoom_rg': (1 - random.random() / 4, 1 + random.random() / 4),
-        'noise_prob':
-            random.random() * 2 / 3,
-        'noise_rg':
-            np.random.lognormal(sigma=.5) * .02,
-        # model
-        'use_meta':
-            False,
-        'model_fn':
-            choice([
-                'model1_wider', 'model0', 'model0', 'model0', 'model0', 'model0'
-            ]),
-        # preprocessing
-        'preproc_strat':
-            preproc_strat,
-        'channels':
-            channels,
-        'inc_angle_fill':
-            40,
-        'band3_op':
-            choice([
-                'lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
-                'lambda x1, x2: (x1+x2)/2', 'lambda x1, x2: x1*x2',
-                'lambda x1, x2: x1/x2', 'lambda x1, x2: (x1+x2)/2',
-                'lambda x1, x2: (x1+x2)/2', 'lambda x1, x2: (x1+x2)/2',
-                'lambda x1, x2: x2/x1'
-            ]),
-        'soft_targets':
-            choice([False, False, True]),
-        'soft_val':
-            0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
-    }
+        shift_ranges = random.random() * .4
+        channels = choice([2, 3, 3])
+        if channels == 2:
+            preproc_strat = 'band2'
+        else:
+            preproc_strat = 'band3'
+        config = {
+            'name':
+                name,
+            # training
+            'lr':
+                np.random.lognormal(sigma=0.5) * 1e-4,
+            'decay':
+                np.random.lognormal() * 1e-6,
+            'relu_type':
+                choice(['selu', 'relu', 'elu', 'elu']),
+            'epochs':
+                choice([50]),
+            'full_cycls_per_epoch':
+                8,
+            'batch_size':
+                choice([16, 32, 64]),
+            'lr_patience':
+                choice([5, 10]),
+            'stop_patience':
+                choice([5, 7, 10]),
+            # data augmentation
+            'hflip_prob':
+                random.random(),
+            'vflip_prob':
+                random.random(),
+            'rot90_prob':
+                random.random() / 2 + 0.5,
+            'rot_prob':
+                random.random() / 2,
+            'rotate_rg':
+                random.random() * 45,
+            'shift_prob':
+                random.random() / 2,
+            'shift_width_rg':
+                shift_ranges,
+            'shift_height_rg':
+                shift_ranges,
+            'zoom_prob':
+                random.random() / 2,
+            'zoom_rg': (1 - random.random(), 1 + random.random()),
+            'noise_prob':
+                random.random() / 2,
+            'noise_rg':
+                np.random.lognormal(sigma=.5) * .02,
+            # model
+            'use_meta':
+                False,
+            'model_fn':
+                choice([
+                    'model0', 'model0',
+                    'model1_meta', 'model2_meta')
+                ]),
+            # preprocessing
+            'preproc_strat':
+                preproc_strat,
+            'channels':
+                channels,
+            'inc_angle_fill':
+                40,
+            'band3_op':
+                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2']),
+            'soft_targets':
+                False,
+            'soft_val':
+                0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
+        }
+        if 'meta' in config['model_fn']:
+            config['use_meta'] = True
+        return config
+    
 
 
 def get_default_config(cor_zoom=True):
@@ -137,6 +149,7 @@ def get_default_config(cor_zoom=True):
         zoom_rg = (.1, .1)
     return {
         'name': 'default',
+        'output_name': 'default_out.json',
         # training
         'lr': 8e-5,
         'decay': 1e-6,
@@ -204,7 +217,12 @@ def single_run(config, training=True):
     tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M-%S_%f")
     config['tmp'] = tmp
     config_name = '../config/config_{}_{}.json'.format(tmp, config['name'])
+    output_name = '../output/out_{}_{}.json'.format(tmp, config['name'])
+    config['model_w_name'] = "../weights/weights_{}_{}.hdf5".format(name, tmp)
+    config['output_name'] = output_name
+    
     print('Saving configuration file to: {}'.format(config_name), flush=True)
+    print('and output file to: {}'.format(output_name), flush=True)
     with open(config_name, 'w') as f:
         json.dump(config, f, indent=4)
 
@@ -229,7 +247,11 @@ def run_iterations(iters, name=None):
     """ Run iters iterations using random config func."""
     for i in range(int(iters)):
         print('Starting iteration {}/{}\n\n'.format(i, iters))
-        single_run(gen_randomish_config(name))
+        conf = gen_randomish_config(name)
+        if conf:
+            single_run(conf)
+        else:
+            continue
         print('config iteration completed!!!')
         print('#' * 40)
         print('\n\n\n\n\n\n\n\n', flush=True)
