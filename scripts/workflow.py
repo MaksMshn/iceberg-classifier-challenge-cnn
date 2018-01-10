@@ -50,10 +50,12 @@ def parase_arguments(argv):
 
 
 def gen_randomish_config(name=None):
-    name = name or 'fast_randomish_config'
+    name = name or 'faster_randomish_config'
     if random.random() < 0.25:
         configs = glob.glob('../config/config*json')
         config = choice(configs)
+        with open(config) as f:
+            config = json.load(config)
         config['pseudo_train'] = True
         prev_tmp = config['tmp']
         prev_name = config['name']
@@ -82,7 +84,7 @@ def gen_randomish_config(name=None):
             'relu_type':
                 choice(['selu', 'relu', 'elu', 'elu']),
             'epochs':
-                choice([50]),
+                choice([30, 40, 50]),
             'full_cycls_per_epoch':
                 8,
             'batch_size':
