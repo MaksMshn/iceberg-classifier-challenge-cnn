@@ -269,9 +269,9 @@ def train(dataset, model, **config):
 
     if use_meta:
         loss_val, acc_val = model.evaluate(
-            [[X_test, Xm_test], y_test], batch_size=batch_size, verbose=0)
+            [X_test, Xm_test], y_test, batch_size=batch_size, verbose=0)
         loss_tr, acc_tr = model.evaluate(
-            [[X_train, Xm_train], y_train], batch_size=batch_size, verbose=0)
+            [X_train, Xm_train], y_train, batch_size=batch_size, verbose=0)
     else:
         loss_val, acc_val = model.evaluate(
             X_test, y_test, batch_size=batch_size, verbose=0)
