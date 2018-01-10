@@ -52,7 +52,7 @@ def gen_randomish_config():
         # preprocessing
         'preproc_strat': preproc_strat,
         'channels': channels,
-        'inc_angle_fill': -1,
+        'inc_angle_fill': 40,
         'band3_op': choice(['lambda x1, x2: x1-x2','lambda x1, x2: x1+x2',
                             'lambda x1, x2: (x1+x2)/2','lambda x1, x2: x1*x2',
                             'lambda x1, x2: x1/x2','lambda x1, x2: (x1+x2)/2',
@@ -97,7 +97,7 @@ def get_default_config(cor_zoom=True):
         'model_fn': 'model0',
         # preprocessing
         'preproc_strat': 'band3',
-        'inc_angle_fill': -1,
+        'inc_angle_fill': 40,
         'band3_op': 'lambda x1, x2: (x1+x2)/2',
         'soft_targets': False,
         'soft_val': 0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0

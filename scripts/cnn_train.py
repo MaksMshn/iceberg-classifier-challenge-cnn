@@ -107,6 +107,11 @@ def train(dataset,
     X_train, X_test, Xm_train, Xm_test, y_train, y_test = train_test_split(
         data, meta, labels, test_size=test_ratio, random_state=split_seed)
 
+    if use_meta:
+        valid_data = ([X_test, Xm_test], y_test)
+    else:
+        valid_data = (X_test, y_test)
+
     print('splitted: {0}, {1}'.format(X_train.shape, X_test.shape), flush=True)
     print('splitted: {0}, {1}'.format(y_train.shape, y_test.shape), flush=True)
 
@@ -135,16 +140,13 @@ def train(dataset,
     ##########
 
     model.fit_generator(
-        generator=data_generator(
-            X_train,
-            Xm_train,
-            y_train,
-            **config),
-        steps_per_epoch=np.ceil(full_cycls_per_epoch * len(y_train) /(batch_size)),
+        generator=data_generator(X_train, Xm_train, y_train, **config),
+        steps_per_epoch=np.ceil(full_cycls_per_epoch * len(y_train) /
+                                batch_size),
         epochs=epochs,
         verbose=0,
         callbacks=callbacks,
-        validation_data=(X_test,y_test))
+        validation_data=valid_data)
 
     model.load_weights(weights_file)
 
@@ -160,7 +162,8 @@ def train(dataset,
             X_train, y_train, batch_size=batch_size, verbose=0)
 
     print(
-        '\n\nLoss/Acc in validation data: {:.5f}/{:.5f}'.format(loss_val, acc_val),
+        '\n\nLoss/Acc in validation data: {:.5f}/{:.5f}'.format(
+            loss_val, acc_val),
         flush=True)
     print(
         'Loss/Acc in training data: {:.5f}/{:.5f}\n'.format(loss_tr, acc_tr),
@@ -180,7 +183,8 @@ def evaluate(model, dataset, target='is_iceberg', **config):
     print('\nPredict...', flush=True)
 
     if use_meta:
-        pred = model.predict([test, test_meta], batch_size=batch_size, verbose=2)
+        pred = model.predict(
+            [test, test_meta], batch_size=batch_size, verbose=2)
     else:
         pred = model.predict(test, batch_size=batch_size, verbose=2)
 
@@ -196,5 +200,5 @@ def evaluate(model, dataset, target='is_iceberg', **config):
     subm.to_csv('../submit/{}'.format(file), index=False, float_format='%.6f')
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     print('Run from another script!')
