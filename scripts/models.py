@@ -228,7 +228,8 @@ def model1_deeper(**config):
     fcnn = BatchNormalization()(fcnn)
     fcnn = Dropout(0.1)(fcnn)
 
-    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
+    fcnn = Conv2D(
+        64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
     fcnn = BatchNormalization()(fcnn)
     fcnn = Dropout(0.1)(fcnn)
 
@@ -242,7 +243,9 @@ def model1_deeper(**config):
     fcnn = BatchNormalization()(fcnn)
 
     fcnn = Conv2D(
-        128, kernel_size=(3, 3), activation=relu_type,)(fcnn)
+        128,
+        kernel_size=(3, 3),
+        activation=relu_type,)(fcnn)
     fcnn = Dropout(0.2)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = BatchNormalization()(fcnn)
@@ -369,15 +372,21 @@ def model2_meta(**config):
 
     fcnn = Concatenate()([fcnn, fcnn_2, input_2_bn])
 
-    dense = Dense(128, activation=relu_type)(fcnn)
+    dense = Dense(
+        128,
+        activation=relu_type,
+        kernel_initializer='lecun_normal')(fcnn)
     dense = AlphaDropout(0.2)(dense)
-    dense = Dense(128, activation=relu_type)(dense)
+    dense = Dense(
+        128, activation=relu_type, kernel_initializer='lecun_normal')(dense)
     dense = AlphaDropout(0.2)(dense)
-    dense = Dense(64, activation=relu_type)(dense)
+    dense = Dense(
+        64, activation=relu_type, kernel_initializer='lecun_normal')(dense)
     dense = AlphaDropout(0.2)(dense)
     dense = BatchNormalization()(dense)
 
-    output = Dense(1, activation="sigmoid")(dense)
+    output = Dense(
+        1, activation="sigmoid", kernel_initializer='lecun_normal')(dense)
 
     model = Model([input_1, input_2], output)
 
