@@ -133,6 +133,8 @@ def gen_randomish_config(name=None):
                 False,
             'soft_val':
                 0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
+            # pseudo train
+            'pseudo_train' : False
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
