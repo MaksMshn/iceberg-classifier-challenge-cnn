@@ -342,6 +342,7 @@ def model2_meta(**config):
         activation=relu_type,
         padding='same',
         kernel_initializer=initializer)(fcnn_2)
+    fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
     fcnn_2 = AlphaDropout(0.2)(fcnn_2)
     fcnn_2 = BatchNormalization()(fcnn_2)
 
@@ -349,7 +350,6 @@ def model2_meta(**config):
         64,
         kernel_size=(3, 3),
         activation=relu_type,
-        padding='same',
         kernel_initializer=initializer)(fcnn_2)
     fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
     fcnn_2 = AlphaDropout(0.2)(fcnn_2)
@@ -359,7 +359,6 @@ def model2_meta(**config):
         128,
         kernel_size=(3, 3),
         activation=relu_type,
-        padding='same',
         kernel_initializer=initializer)(fcnn_2)
     fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
     fcnn_2 = AlphaDropout(0.2)(fcnn_2)
@@ -373,9 +372,7 @@ def model2_meta(**config):
     fcnn = Concatenate()([fcnn, fcnn_2, input_2_bn])
 
     dense = Dense(
-        128,
-        activation=relu_type,
-        kernel_initializer='lecun_normal')(fcnn)
+        128, activation=relu_type, kernel_initializer='lecun_normal')(fcnn)
     dense = AlphaDropout(0.2)(dense)
     dense = Dense(
         128, activation=relu_type, kernel_initializer='lecun_normal')(dense)
@@ -400,7 +397,7 @@ def use_saved_model(p, **config):
     return load_model(p)
 
 
-models = [model0]
+models = [model2_meta]
 
 if __name__ == '__main__':
     config = {'lr': 1, 'decay': .1, 'rely_type': 'relu'}
