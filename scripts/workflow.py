@@ -27,7 +27,8 @@ def parase_arguments(argv):
         and train them. Ignores options such as load or config.""")
     parser.add_argument(
         '--evaluate',
-        help="""Do not train, just do a single evaluation run.""")
+        help="""Do not train, just do a single evaluation run.""",
+        action='store_true')
     parser.add_argument(
         '-l',
         '--load',
