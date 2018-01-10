@@ -55,7 +55,7 @@ def gen_randomish_config(name=None):
         configs = glob.glob('../config/config*json')
         config = choice(configs)
         with open(config) as f:
-            config = json.load(config)
+            config = json.load(f)
         config['pseudo_train'] = True
         prev_tmp = config['tmp']
         prev_name = config['name']
