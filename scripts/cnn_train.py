@@ -111,7 +111,7 @@ def pseudo_generator(data, meta_data, labels, test, test_meta, model, **config):
     batch_pseudo = batch_size - batch_real
     print(
         'Batch sizes: real_batch={}, pseudo_batch={}'.format(
-            len(batch_real), len(batch_pseudo)),
+            batch_real, batch_pseudo),
         flush=True)
 
     while True:
