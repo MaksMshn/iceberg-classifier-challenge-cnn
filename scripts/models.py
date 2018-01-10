@@ -215,10 +215,8 @@ def model2_meta(**config):
     #relu_type = config.get('relu_type', 'relu')
     channels = config.get('channels', 3)
     initializer = config.get('initializer', 'lecun_normal')
-    # set a few values
-    config['relu_type'] = 'selu'
-    relu_type = config['relu_type']
-    config['use_meta'] = True
+    # set activation independently
+    relu_type = 'selu'
 
     input_1 = Input(shape=(75, 75, channels))
     fcnn = BatchNormalization()(input_1)

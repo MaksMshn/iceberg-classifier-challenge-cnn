@@ -39,6 +39,7 @@ def parase_arguments(argv):
     parser.add_argument('--activation', help="""Activatio name.""")
     parser.add_argument('--epochs', help="""Number of epochs.""", type=int)
     parser.add_argument('--model_fn', help="""Specify type of model.""")
+    parser.add_argument('--meta', help="""Use metadata.""", action='store_true')
     parser.add_argument(
         '--pseudo', help="""Use pseudo labeling.""", action='store_true')
     return parser.parse_args(argv)
@@ -257,6 +258,8 @@ if __name__ == '__main__':
         config['epochs'] = args.epochs
     if args.pseudo:
         config['pseudo_train'] = args.pseudo
+    if args.meta:
+        config['use_meta'] = args.meta
     if args.evaluate:
         single_run(config, training=False)
     else:
