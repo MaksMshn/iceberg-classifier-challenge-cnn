@@ -140,7 +140,7 @@ def get_default_config(cor_zoom=True):
         'epochs': 250,
         'full_cycls_per_epoch': 8,
         'batch_size': 32,
-        'lr_patience': 15,
+        'lr_patience': 10,
         'stop_patience': 60,
         # data augmentation
         'hflip_prob': .5,
@@ -197,7 +197,7 @@ def single_run(config):
     model.summary()
     print('Model compiled after {}'.format(runtime(start)))
 
-    tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M")
+    tmp = dt.datetime.now().strftime("%Y-%m-%d-%H-%M-%S_%f")
     config['tmp'] = tmp
     config_name = '../config/config_{}_{}.json'.format(tmp, config['name'])
     print('Saving configuration file to: {}'.format(config_name), flush=True)

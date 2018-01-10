@@ -186,6 +186,7 @@ def train(dataset, model, **config):
     name = config.get('name', 'unnamed')
     epochs = config.get('epochs', 250)
     batch_size = config.get('batch_size', 32)
+    lr = config.get('lr', 1.0e-4)
     lr_patience = config.get('lr_patience', 15)
     stop_patience = config.get('stop_patience', 50)
     use_meta = config.get('use_meta', False)
@@ -227,7 +228,8 @@ def train(dataset, model, **config):
         factor=0.1,
         patience=lr_patience,
         verbose=1,
-        epsilon=1e-4)
+        epsilon=1e-4,
+        min_lr=lr/1000)
     model_chk = ModelCheckpoint(
         monitor='val_loss',
         filepath=weights_file,
