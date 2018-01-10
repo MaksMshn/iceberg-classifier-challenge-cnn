@@ -227,14 +227,20 @@ def model2_meta(**config):
         kernel_initializer=initializer)(fcnn)
     fcnn = MaxPooling2D((3, 3))(fcnn)
     fcnn = BatchNormalization()(fcnn)
-    fcnn_1 = AlphaDropout(0.1)(fcnn)
 
     #Path 1
+    fcnn = Conv2D(
+        64,
+        kernel_size=(3, 3),
+        activation=relu_type,
+        kernel_initializer=initializer)(fcnn_1)
+    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
+
     fcnn = Conv2D(
         128,
         kernel_size=(3, 3),
         activation=relu_type,
-        kernel_initializer=initializer)(fcnn_1)
+        kernel_initializer=initializer)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = AlphaDropout(0.2)(fcnn)
 
@@ -254,43 +260,26 @@ def model2_meta(**config):
         64,
         kernel_size=(3, 3),
         activation=relu_type,
-        kernel_initializer=initializer)(fcnn_1)
+        kernel_initializer=initializer)(fcnn_2)
+    fcnn = AlphaDropout(0.2)(fcnn)
     fcnn_2 = BatchNormalization()(fcnn_2)
 
     fcnn_2 = Conv2D(
         128,
         kernel_size=(3, 3),
         activation=relu_type,
-        kernel_initializer=initializer)(fcnn_2)
-    fcnn = AlphaDropout(0.2)(fcnn)
-    fcnn_2 = BatchNormalization()(fcnn_2)
-
-    fcnn_2 = Conv2D(
-        256,
-        kernel_size=(3, 3),
-        activation=relu_type,
         padding='same',
         kernel_initializer=initializer)(fcnn_2)
     fcnn = AlphaDropout(0.2)(fcnn)
     fcnn_2 = BatchNormalization()(fcnn_2)
 
     fcnn_2 = Conv2D(
-        512,
+        128,
         kernel_size=(3, 3),
         activation=relu_type,
         padding='same',
         kernel_initializer=initializer)(fcnn_2)
     fcnn_2 = AlphaDropout(0.2)(fcnn_2)
-    fcnn_2 = BatchNormalization()(fcnn_2)
-
-    fcnn_2 = Conv2D(
-        256,
-        kernel_size=(3, 3),
-        activation=relu_type,
-        padding='same',
-        kernel_initializer=initializer)(fcnn_2)
-    fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
-    fcnn_2 = AlphaDropout(0.3)(fcnn_2)
     fcnn_2 = BatchNormalization()(fcnn_2)
 
     fcnn_2 = Conv2D(
@@ -300,7 +289,17 @@ def model2_meta(**config):
         padding='same',
         kernel_initializer=initializer)(fcnn_2)
     fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
-    fcnn_2 = AlphaDropout(0.3)(fcnn_2)
+    fcnn_2 = AlphaDropout(0.2)(fcnn_2)
+    fcnn_2 = BatchNormalization()(fcnn_2)
+
+    fcnn_2 = Conv2D(
+        128,
+        kernel_size=(3, 3),
+        activation=relu_type,
+        padding='same',
+        kernel_initializer=initializer)(fcnn_2)
+    fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
+    fcnn_2 = AlphaDropout(0.2)(fcnn_2)
     fcnn_2 = BatchNormalization()(fcnn_2)
 
     fcnn_2 = Flatten()(fcnn_2)
@@ -310,12 +309,13 @@ def model2_meta(**config):
 
     fcnn = Concatenate()([fcnn, fcnn_2, input_2_bn])
 
-    dense = Dense(256, activation=relu_type)(fcnn)
+    dense = Dense(128, activation=relu_type)(fcnn)
     dense = AlphaDropout(0.2)(dense)
     dense = Dense(128, activation=relu_type)(dense)
     dense = AlphaDropout(0.2)(dense)
     dense = Dense(64, activation=relu_type)(dense)
     dense = AlphaDropout(0.2)(dense)
+    dense = BatchNormalization()(dense)
 
     output = Dense(1, activation="sigmoid")(dense)
 
