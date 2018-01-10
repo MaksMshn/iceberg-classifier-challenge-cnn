@@ -57,8 +57,9 @@ def model0(**config):
     lr = config.get('lr', 8e-5)
     decay = config.get('decay', 1e-6)
     relu_type = config.get('relu_type', 'relu')
+    channels = config.get('channels', 3)
 
-    input_1 = Input(shape=(75, 75, 3))
+    input_1 = Input(shape=(75, 75, channels))
 
     fcnn = BatchNormalization()(input_1)
     fcnn = Conv2D(32, kernel_size=(3, 3), activation=relu_type)(fcnn)
@@ -106,8 +107,9 @@ def model1_wider(**config):
     lr = config.get('lr', 8e-5)
     decay = config.get('decay', 1e-6)
     relu_type = config.get('relu_type', 'relu')
+    channels = config.get('channels', 3)
 
-    input_1 = Input(shape=(75, 75, 3))
+    input_1 = Input(shape=(75, 75, channels))
 
     fcnn = BatchNormalization()(input_1)
     fcnn = Conv2D(32, kernel_size=(3, 3), activation=relu_type)(fcnn)
