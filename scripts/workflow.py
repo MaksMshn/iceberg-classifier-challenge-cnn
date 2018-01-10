@@ -36,10 +36,8 @@ def parase_arguments(argv):
     parser.add_argument(
         '-n', '--name', help="""Set model name.""", default='unnamed')
     # some useful model configurations
-    parser.add_argument(
-        '--activation', help="""Activatio name.""", default='relu')
-    parser.add_argument(
-        '--epochs', help="""Number of epochs.""", default=250, type=int)
+    parser.add_argument('--activation', help="""Activatio name.""")
+    parser.add_argument('--epochs', help="""Number of epochs.""", type=int)
     parser.add_argument(
         '--pseudo', help="""Use pseudo labeling.""", action='store_true')
     return parser.parse_args(argv)
@@ -246,7 +244,11 @@ if __name__ == '__main__':
     if args.load:
         config['model_fn'] = args.load
     config['name'] = args.name
-    config['relu_type'] = args.activation
+    if args.activation:
+        config['relu_type'] = args.activation
+    if args.epochs:
+        config['epochs'] = args.epochs
+    # perhaps get rid of the default?
     config['pseudo_train'] = args.pseudo
     if args.evaluate:
         single_run(config, training=False)
