@@ -75,12 +75,111 @@ def data_generator(data,
                 yield x_batch, y_batch
 
 
+def predict(model, data, data_meta=None, **config):
+    """ Predict results 
+    data_meta is required only if use_meta = True
+    """
+    use_meta = config.get('use_meta', False)
+    batch_size = config.get('batch_size', 16)
+    if use_meta:
+        pred = model.predict(
+            [data, data_meta], batch_size=batch_size, verbose=2)
+    else:
+        pred = model.predict(data, batch_size=batch_size, verbose=2)
+
+    return np.squeeze(pred)
+
+
+def pseudo_generator(data, meta_data, labels, test, test_meta, model, **config):
+
+    use_meta = config.get('use_meta', False)
+    batch_size = config.get('batch_size', 16)
+    retrain_freq = config.get('pseudo_retrain_freq', 8)
+    pseudo_type = config.get('pseudo_type', 'soft') # hard/soft/clipped
+    pseudo_proportion = config.get('pseudo_prop', .4)
+
+    m_epoch = 0  # mini epochs are counted as for loop completions
+
+    indices_real = [i for i in range(len(labels))]
+    indices_pesudo = [i for i in range(len(test))]
+
+    # shuffle indices in case test is somehow ordered
+    np.random.shuffle(indices_real)
+    np.random.shuffle(indices_pesudo)
+
+    batch_real = int((1 - pseudo_proportion) * batch_size)
+    batch_pseudo = batch_size - batch_real
+    print(
+        'Batch sizes: real_batch={}, pseudo_batch={}'.format(
+            len(batch_real), len(batch_pseudo)),
+        flush=True)
+
+    while True:
+
+        x_data = np.copy(data)
+        pseudo_data = np.copy(test)
+        if use_meta:
+            x_meta_data = np.copy(meta_data)
+            pseudo_meta_data = np.copy(test_meta)
+        x_labels = np.copy(labels)
+
+        # retrain every retrain_freq mini-epochs
+        if retrain_freq > 0 and m_epoch % retrain_freq == 0:
+            pseudo = predict(model, test, test_meta, **config)
+
+            if pseudo_type == 'hard':
+                pseudo = np.round(pseudo)
+            elif pseudo_type == 'clipped':
+                pseudo_clip_val = config.get('pseudo_clip_val', .99)
+                pseudo = np.clip(pseudo, 1 - pseudo_clip_val, pseudo_clip_val)
+            # else - soft targets, nothing to do
+
+        start_real = 0
+        start_pseudo = 0
+
+        while start_real < len(labels):
+            end_real = min(start_real + batch_real, len(labels))
+            end_pseudo = min(start_pseudo + batch_pseudo, len(test))
+            real_indices = indices_real[start_real:end_real]
+            pseudo_indices = indices_pesudo[start_pseudo:end_pseudo]
+
+            #select data
+            data_batch = np.r_[x_data[real_indices], pseudo_data[
+                pseudo_indices]]
+            if use_meta:
+                xm_batch = np.r_[x_meta_data[real_indices], pseudo_meta_data[
+                    pseudo_indices]]
+            y_batch = np.r_[x_labels[real_indices], pseudo[pseudo_indices]]
+
+            x_batch = []
+
+            for x in data_batch:
+                x = augment(x, **config)
+                x_batch.append(x)
+
+            x_batch = np.array(x_batch, dtype=np.float32)
+
+            # update indices
+            start_real += batch_real
+            start_pseudo += batch_pseudo
+
+            if start_pseudo >= len(test):
+                start_pseudo = 0
+
+            if use_meta:
+                yield [x_batch, xm_batch], y_batch
+            else:
+                yield x_batch, y_batch
+
+        # mini_epoch finished
+        m_epoch += 1
+
+
 ###############################################################################
-def train(dataset,
-          model,
-          **config):
+def train(dataset, model, **config):
     """ 
-    dataset:  (y_train, X_train, X_meta), ]
+    dataset:  (y_train, X_train, X_meta) if pseudo=False, 
+        and [(y_train, X_train, X_meta), (_, test, test_meta)] if pseudo=True
     """
     np.random.seed(1017)
 
@@ -92,10 +191,15 @@ def train(dataset,
     use_meta = config.get('use_meta', False)
     full_cycls_per_epoch = config.get('full_cycls_per_epoch', 8)
     tmp = config.get('tmp')
+    pseudo = config.get('pseudo_train', False)
 
-    (labels, data, meta) = dataset
+    if pseudo:
+        ((labels, data, meta), (_, test, test_meta)) = dataset
+    else:
+        (labels, data, meta) = dataset
 
-    weights_file = os.path.join("../weights/weights_{}_{}.hdf5".format(name, tmp))
+    weights_file = os.path.join(
+        "../weights/weights_{}_{}.hdf5".format(name, tmp))
 
     #training
     print('epochs={}, batch={}'.format(epochs, batch_size), flush=True)
@@ -139,14 +243,25 @@ def train(dataset,
     callbacks = [earlystop, reduce_lr_loss, model_chk, flush_logger]
     ##########
 
-    model.fit_generator(
-        generator=data_generator(X_train, Xm_train, y_train, **config),
-        steps_per_epoch=np.ceil(full_cycls_per_epoch * len(y_train) /
-                                batch_size),
-        epochs=epochs,
-        verbose=0,
-        callbacks=callbacks,
-        validation_data=valid_data)
+    if pseudo:
+        model.fit_generator(
+            generator=pseudo_generator(X_train, Xm_train, y_train, test,
+                                       test_meta, model, **config),
+            steps_per_epoch=np.ceil(
+                full_cycls_per_epoch * len(y_train) / batch_size),
+            epochs=epochs,
+            verbose=0,
+            callbacks=callbacks,
+            validation_data=valid_data)
+    else:
+        model.fit_generator(
+            generator=data_generator(X_train, Xm_train, y_train, **config),
+            steps_per_epoch=np.ceil(
+                full_cycls_per_epoch * len(y_train) / batch_size),
+            epochs=epochs,
+            verbose=0,
+            callbacks=callbacks,
+            validation_data=valid_data)
 
     model.load_weights(weights_file)
 
@@ -182,13 +297,7 @@ def evaluate(model, dataset, target='is_iceberg', **config):
 
     print('\nPredict...', flush=True)
 
-    if use_meta:
-        pred = model.predict(
-            [test, test_meta], batch_size=batch_size, verbose=2)
-    else:
-        pred = model.predict(test, batch_size=batch_size, verbose=2)
-
-    pred = np.squeeze(pred)
+    pred = predict(model, test, test_meta, **config)
 
     file = 'subm_{}_{}.csv'.format(tmp, name)
     model_file = 'subm_{}_{}_model.txt'.format(tmp, name)

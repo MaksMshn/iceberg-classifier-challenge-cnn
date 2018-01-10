@@ -288,6 +288,10 @@ def model2_meta(**config):
     return model
 
 
+def use_saved_model(p, **config):
+    return load_model(p)
+
+
 models = [model0]
 
 if __name__ == '__main__':
