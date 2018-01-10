@@ -217,6 +217,7 @@ def model2_meta(**config):
     initializer = config.get('initializer', 'lecun_normal')
     # set a few values
     config['relu_type'] = 'selu'
+    relu_type = config['relu_type']
     config['use_meta'] = True
 
     input_1 = Input(shape=(75, 75, channels))
