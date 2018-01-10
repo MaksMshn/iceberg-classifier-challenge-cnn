@@ -26,6 +26,9 @@ def parase_arguments(argv):
         help="""Generate i random configurations using get_randomish function
         and train them. Ignores options such as load or config.""")
     parser.add_argument(
+        '--evaluate',
+        help="""Do not train, just do a single evaluation run.""")
+    parser.add_argument(
         '-l',
         '--load',
         help="""Load specified model instead of using built ins.""")
@@ -182,7 +185,7 @@ def runtime(start):
     return "{}:{:>02}:{:>05.2f}".format(h, m, s)
 
 
-def single_run(config):
+def single_run(config, training=True):
     start = time.time()
 
     print('Using following configuration:')
@@ -204,12 +207,12 @@ def single_run(config):
     with open(config_name, 'w') as f:
         json.dump(config, f, indent=4)
 
-    labels, data, meta = create_dataset('train.json', True, **config)
-    print('Data loaded after {}'.format(runtime(start)))
-
-    dataset = (labels, data, meta)
-    model = train(dataset, model, **config)
-    print('Model trained after {}'.format(runtime(start)))
+    if training:
+        labels, data, meta = create_dataset('train.json', True, **config)
+        print('Data loaded after {}'.format(runtime(start)))
+        dataset = (labels, data, meta)
+        model = train(dataset, model, **config)
+        print('Model trained after {}'.format(runtime(start)))
 
     idxs, test, test_meta = create_dataset('test.json', False, **config)
     dataset = (idxs, test, test_meta)
@@ -244,4 +247,7 @@ if __name__ == '__main__':
     config['name'] = args.name
     config['relu_type'] = args.activation
     config['pseudo_train'] = args.pseudo
-    single_run(config)
+    if args.evaluate:
+        single_run(config, training=False)
+    else:
+        single_run(config)
