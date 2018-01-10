@@ -249,11 +249,6 @@ def model1_deeper(**config):
 
     fcnn = Flatten()(fcnn)
 
-    input_2 = Input(shape=[1], name='angle')
-    input_2_bn = BatchNormalization()(input_2)
-
-    fcnn = Concatenate()([fcnn, input_2_bn])
-
     dense = Dense(128, activation=relu_type)(fcnn)
     dense = Dropout(0.2)(dense)
     dense = Dense(128, activation=relu_type)(dense)
@@ -263,7 +258,7 @@ def model1_deeper(**config):
 
     output = Dense(1, activation="sigmoid")(dense)
 
-    model = Model([input_1, input_2], output)
+    model = Model(input_1, output)
 
     optim = Adam(lr=lr, decay=decay)
     model.compile(
