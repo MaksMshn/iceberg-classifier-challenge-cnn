@@ -119,7 +119,7 @@ def gen_randomish_config(name=None):
             'use_meta':
                 False,
             'model_fn':
-                choice(['model0', 'model1_meta']),
+                choice(['model0', 'model0', 'model1_meta', 'model1_deeper']),
             # preprocessing
             'preproc_strat':
                 preproc_strat,
@@ -134,7 +134,8 @@ def gen_randomish_config(name=None):
             'soft_val':
                 0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
             # pseudo train
-            'pseudo_train' : False
+            'pseudo_train':
+                False
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
@@ -229,7 +230,7 @@ def single_run(config, training=True):
 
     if training:
         labels, data, meta = create_dataset('train.json', True, **config)
-        if config['pseudo_train']:
+        if config.get('pseudo_train', False):
             idxs, test, test_meta = create_dataset('test.json', False, **config)
             dataset = ((labels, data, meta), (idxs, test, test_meta))
         else:
