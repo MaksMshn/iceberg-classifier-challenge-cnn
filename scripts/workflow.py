@@ -119,7 +119,8 @@ def gen_randomish_config(name=None):
             'use_meta':
                 False,
             'model_fn':
-                choice(['model0', 'model0', 'model1_meta', 'model1_deeper']),
+                choice(['model0', 'model0', 'model1_meta', 'model1_deeper',
+                    'model2_meta']),
             # preprocessing
             'preproc_strat':
                 preproc_strat,
