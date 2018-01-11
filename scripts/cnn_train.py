@@ -229,7 +229,7 @@ def train(dataset, model, **config):
         patience=lr_patience,
         verbose=1,
         epsilon=1e-4,
-        min_lr=lr / 1000)
+        min_lr=lr / 10000)
     model_chk = ModelCheckpoint(
         monitor='val_loss',
         filepath=model_w_name,
@@ -288,9 +288,9 @@ def train(dataset, model, **config):
 
     train_preds = predict(model, data, meta, **config)
     train_log = {
-        'preds': list(train_preds),
-        'labels': list(labels),
-        'meta': list(meta),
+        'preds': list(train_preds.astype(float)),
+        'labels': list(labels.astype(float)),
+        'meta': list(meta.astype(float)),
         'val_loss': float(loss_val),
         'val_acc': float(acc_val),
         'tr_loss': float(loss_tr),

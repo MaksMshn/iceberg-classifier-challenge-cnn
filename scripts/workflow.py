@@ -48,10 +48,106 @@ def parase_arguments(argv):
 
 ####  Hyperparameters ####
 
+def gen_randomish_config2(name=None):
+    name = name or 'optimized_m1_randomish_config'
+    if random.random() < -0.25: #never
+        configs = glob.glob('../config/config*json')
+        config = choice(configs)
+        with open(config) as f:
+            config = json.load(f)
+        config['pseudo_train'] = True
+        prev_tmp = config['tmp']
+        prev_name = config['name']
+        prev_weights = "../weights/weights_{}_{}.hdf5".format(
+            prev_name, prev_tmp)
+        if os.path.isfile(prev_weights):
+            config['model_fn'] = prev_weights
+            return config
+        else:
+            return None
+    else:
+        shift_ranges = random.random() * .8
+        channels = choice([2, 3])
+        if channels == 2:
+            preproc_strat = 'band2'
+        else:
+            preproc_strat = 'band3'
+        config = {
+            'name':
+                name,
+            # training
+            'lr':
+                np.random.lognormal(sigma=0.5) * 1e-6,
+            'decay':
+                np.random.lognormal() * 1e-6,
+            'relu_type':
+                choice(['selu', 'relu', 'elu', 'elu']),
+            'epochs':
+                choice([30, 40, 50]),
+            'full_cycls_per_epoch':
+                8,
+            'batch_size':
+                choice([ 64]),
+            'lr_patience':
+                choice([30, 50, 100]),
+            'stop_patience':
+                choice([5, 7, 10]),
+            # data augmentation
+            'hflip_prob':
+                random.random(),
+            'vflip_prob':
+                random.random(),
+            'rot90_prob':
+                random.random() / 2 + 0.5,
+            'rot_prob':
+                random.random() / 2,
+            'rotate_rg':
+                random.random() * 45,
+            'shift_prob':
+                random.random() / 2,
+            'shift_width_rg':
+                shift_ranges,
+            'shift_height_rg':
+                shift_ranges,
+            'zoom_prob':
+                random.random() / 2,
+            'zoom_rg': (1 - random.random(), 1 + random.random()),
+            'noise_prob':
+                random.random() / 2,
+            'noise_rg':
+                np.random.lognormal(sigma=.5) * .02,
+            # model
+            'use_meta':
+                False,
+            'model_fn':
+                choice(['model0', 'model0', 'model1_meta', 'model1_deeper',
+                    'model2_meta']),
+            # preprocessing
+            'preproc_strat':
+                preproc_strat,
+            'channels':
+                channels,
+            'inc_angle_fill':
+                40,
+            'band3_op':
+                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2']),
+            'soft_targets':
+                False,
+            'soft_val':
+                0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
+            # pseudo train
+            'pseudo_train':
+                False
+        }
+        if 'meta' in config['model_fn']:
+            config['use_meta'] = True
+        return config
+
+
 
 def gen_randomish_config(name=None):
-    name = name or 'faster_randomish_config'
-    if random.random() < 0.25:
+    name = name or 'continue training prev model'
+    if random.random() < 1.4: # always
         configs = glob.glob('../config/config*json')
         config = choice(configs)
         with open(config) as f:
@@ -206,9 +302,6 @@ def runtime(start):
 def single_run(config, training=True):
     start = time.time()
 
-    print('Using following configuration:')
-    print(json.dumps(config, indent=2))
-
     if config['model_fn'].endswith('hdf5'):
         # using preset config
         model = models.use_saved_model(config['model_fn'], **config)
@@ -230,6 +323,9 @@ def single_run(config, training=True):
     print('and output file to: {}'.format(output_name), flush=True)
     with open(config_name, 'w') as f:
         json.dump(config, f, indent=4)
+    
+    print('Using following configuration:')
+    print(json.dumps(config, indent=2))
 
     if training:
         labels, data, meta = create_dataset('train.json', True, **config)
