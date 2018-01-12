@@ -78,13 +78,13 @@ def gen_randomish_config3(name=None):
                 name,
             # training
             'lr':
-                np.random.lognormal(sigma=0.5) *1.0e-5,
+                np.random.lognormal(sigma=0.5) * 1.0e-5,
             'decay':
                 np.random.lognormal() * 3.4670665307866379e-06,
             'relu_type':
                 choice(['selu']),
             'epochs':
-                choice([ 200,300,500]),
+                choice([200, 300, 500]),
             'full_cycls_per_epoch':
                 8,
             'batch_size':
@@ -92,7 +92,7 @@ def gen_randomish_config3(name=None):
             'lr_patience':
                 choice([50, 100]),
             'stop_patience':
-                choice([ 25, 50, 100, 300]),
+                choice([25, 50, 100, 300]),
             # data augmentation
             'hflip_prob':
                 .1 + random.uniform(-1, 1) * .28,
@@ -130,8 +130,10 @@ def gen_randomish_config3(name=None):
             'inc_angle_fill':
                 40,
             'band3_op':
-                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
-                           'lambda x1, x2: x1*x2']),
+                choice([
+                    'lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
+                    'lambda x1, x2: x1*x2'
+                ]),
             'soft_targets':
                 False,
             'soft_val':
@@ -167,7 +169,7 @@ def gen_randomish_config2(name=None):
             return None
     else:
         shift_ranges = 0.3 + random.uniform(-1, 1) * .2
-        channels = choice([2, 3])
+        channels = choice([2, 2, 3])
         if channels == 2:
             preproc_strat = 'band2'
         else:
@@ -187,11 +189,11 @@ def gen_randomish_config2(name=None):
             'full_cycls_per_epoch':
                 8,
             'batch_size':
-                choice([32,64]),
+                choice([32, 64]),
             'lr_patience':
                 choice([50, 100]),
             'stop_patience':
-                choice([ 15, 20, 25]),
+                choice([15, 20, 25]),
             # data augmentation
             'hflip_prob':
                 .1 + random.uniform(-1, 1) * .28,
@@ -211,7 +213,7 @@ def gen_randomish_config2(name=None):
                 shift_ranges,
             'zoom_prob':
                 0.23867510928667224 + random.uniform(-1, 1) * .14,
-            'zoom_rg': (1 - random.random()/2, 1 + random.random()),
+            'zoom_rg': (1 - random.random() / 2, 1 + random.random()),
             'noise_prob':
                 0.6338943735248288 + random.uniform(-1, 1) * .16,
             'noise_rg':
@@ -221,7 +223,8 @@ def gen_randomish_config2(name=None):
                 False,
             'model_fn':
                 choice([
-                    'model1_meta', 'model1_deeper',
+                    'model1_deeper_meta',
+                    'model1_deeper',
                 ]),
             # preprocessing
             'preproc_strat':
@@ -231,8 +234,10 @@ def gen_randomish_config2(name=None):
             'inc_angle_fill':
                 40,
             'band3_op':
-                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
-                          'lambda x1, x2: x1*x2']),
+                choice([
+                    'lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
+                    'lambda x1, x2: x1*x2'
+                ]),
             'soft_targets':
                 False,
             'soft_val':
@@ -241,17 +246,17 @@ def gen_randomish_config2(name=None):
             'pseudo_train':
                 False,
             # deep model config
-            'depth' : choice(list(range(8)))
+            'depth':
+                choice(list(range(8)))
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
         return config
 
 
-
 def gen_randomish_config(name=None):
     name = name or 'continue training prev model'
-    if random.random() < 1.4: # always
+    if random.random() < 1.4:  # always
         configs = glob.glob('../config/config*json')
         config = choice(configs)
         with open(config) as f:
@@ -321,8 +326,10 @@ def gen_randomish_config(name=None):
             'use_meta':
                 False,
             'model_fn':
-                choice(['model0', 'model0', 'model1_meta', 'model1_deeper',
-                    'model2_meta']),
+                choice([
+                    'model0', 'model0', 'model1_meta', 'model1_deeper',
+                    'model2_meta'
+                ]),
             # preprocessing
             'preproc_strat':
                 preproc_strat,
@@ -331,8 +338,10 @@ def gen_randomish_config(name=None):
             'inc_angle_fill':
                 40,
             'band3_op':
-                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
-                        'lambda x1, x2: x1*x2']),
+                choice([
+                    'lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
+                    'lambda x1, x2: x1*x2'
+                ]),
             'soft_targets':
                 False,
             'soft_val':
@@ -344,7 +353,6 @@ def gen_randomish_config(name=None):
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
         return config
-
 
 
 def get_default_config(cor_zoom=True):
