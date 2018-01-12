@@ -66,7 +66,7 @@ def gen_randomish_config2(name=None):
         else:
             return None
     else:
-        shift_ranges = random.random() * .8
+        shift_ranges = np.abs(0.1 + random.uniform(-1, 1) * .2)
         channels = choice([2, 3])
         if channels == 2:
             preproc_strat = 'band2'
@@ -77,51 +77,52 @@ def gen_randomish_config2(name=None):
                 name,
             # training
             'lr':
-                np.random.lognormal(sigma=0.5) * 1e-6,
+                np.random.lognormal(sigma=0.5) * 0.00027790185561569629,
             'decay':
-                np.random.lognormal() * 1e-6,
+                np.random.lognormal() * 3.4670665307866379e-06,
             'relu_type':
-                choice(['selu', 'relu', 'elu', 'elu']),
+                choice(['selu', 'elu']),
             'epochs':
-                choice([30, 40, 50]),
+                choice([30, 50, 75, 100]),
             'full_cycls_per_epoch':
                 8,
             'batch_size':
-                choice([ 64]),
+                choice([32,64]),
             'lr_patience':
-                choice([30, 50, 100]),
+                choice([50, 100]),
             'stop_patience':
-                choice([5, 7, 10]),
+                choice([ 15, 20, 25]),
             # data augmentation
             'hflip_prob':
-                random.random(),
+                .1 + random.uniform(-1, 1) * .28,
             'vflip_prob':
-                random.random(),
+                .5 + random.uniform(-1, 1) * .28,
             'rot90_prob':
-                random.random() / 2 + 0.5,
+                0.73007147223015134 + random.uniform(-1, 1) * .14,
             'rot_prob':
-                random.random() / 2,
+                0.39286442681668626 + random.uniform(-1, 1) * .28,
             'rotate_rg':
-                random.random() * 45,
+                15.352924041777015 + random.uniform(-1, 1) * 14,
             'shift_prob':
-                random.random() / 2,
+                0.045233683486776546 + random.uniform(-1, 1) * .14,
             'shift_width_rg':
                 shift_ranges,
             'shift_height_rg':
                 shift_ranges,
             'zoom_prob':
-                random.random() / 2,
-            'zoom_rg': (1 - random.random(), 1 + random.random()),
+                0.23867510928667224 + random.uniform(-1, 1) * .14,
+            'zoom_rg': (1 - random.random()/2, 1 + random.random()),
             'noise_prob':
-                random.random() / 2,
+                0.6338943735248288 + random.uniform(-1, 1) * .16,
             'noise_rg':
-                np.random.lognormal(sigma=.5) * .02,
+                np.random.lognormal(sigma=.2) * 0.019821861298954285,
             # model
             'use_meta':
                 False,
             'model_fn':
-                choice(['model0', 'model0', 'model1_meta', 'model1_deeper',
-                    'model2_meta']),
+                choice([
+                    'model1_meta', 'model1_deeper',
+                ]),
             # preprocessing
             'preproc_strat':
                 preproc_strat,
@@ -137,7 +138,9 @@ def gen_randomish_config2(name=None):
                 0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
             # pseudo train
             'pseudo_train':
-                False
+                False,
+            # deep model config
+            'depth' = choice(list(range(8)))
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
@@ -323,7 +326,7 @@ def single_run(config, training=True):
     print('and output file to: {}'.format(output_name), flush=True)
     with open(config_name, 'w') as f:
         json.dump(config, f, indent=4)
-    
+
     print('Using following configuration:')
     print(json.dumps(config, indent=2))
 

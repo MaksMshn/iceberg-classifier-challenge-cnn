@@ -214,6 +214,7 @@ def model1_deeper(**config):
     decay = config.get('decay', 1e-6)
     relu_type = config.get('relu_type', 'relu')
     channels = config.get('channels', 3)
+    depth = config.get('depth', 1)
 
     input_1 = Input(shape=(75, 75, channels))
 
@@ -233,17 +234,18 @@ def model1_deeper(**config):
     fcnn = BatchNormalization()(fcnn)
     fcnn = Dropout(0.1)(fcnn)
 
-    fcnn = Conv2D(128, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = Dropout(0.2)(fcnn)
 
-    fcnn = Conv2D(
-        128, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
-    fcnn = Dropout(0.2)(fcnn)
-    fcnn = BatchNormalization()(fcnn)
+    for i in range(depth):
+        fcnn = Conv2D(
+            64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
+        fcnn = Dropout(0.2)(fcnn)
+        fcnn = BatchNormalization()(fcnn)
 
     fcnn = Conv2D(
-        128,
+        64,
         kernel_size=(3, 3),
         activation=relu_type,)(fcnn)
     fcnn = Dropout(0.2)(fcnn)
