@@ -141,7 +141,7 @@ def gen_randomish_config3(name=None):
                 False,
             # deep model config
             'depth':
-                choice(list(range(5)))
+                choice(list(range(6)))
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
