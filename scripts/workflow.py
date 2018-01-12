@@ -140,7 +140,7 @@ def gen_randomish_config2(name=None):
             'pseudo_train':
                 False,
             # deep model config
-            'depth' = choice(list(range(8)))
+            'depth' : choice(list(range(8)))
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
