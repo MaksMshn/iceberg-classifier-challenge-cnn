@@ -331,7 +331,8 @@ def gen_randomish_config(name=None):
             'inc_angle_fill':
                 40,
             'band3_op':
-                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2']),
+                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
+                        'lambda x1, x2: x1*x2']),
             'soft_targets':
                 False,
             'soft_val':
@@ -453,7 +454,7 @@ def run_iterations(iters, name=None):
     for i in range(int(iters)):
         print('Starting iteration {}/{}\n\n'.format(i, iters))
         #conf = gen_randomish_config(name)
-        conf = gen_randomish_config2(name)
+        conf = gen_randomish_config3(name)
         if conf:
             single_run(conf)
         else:
