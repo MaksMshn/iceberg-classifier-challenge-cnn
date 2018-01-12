@@ -92,7 +92,7 @@ def gen_randomish_config3(name=None):
             'lr_patience':
                 choice([50, 100]),
             'stop_patience':
-                choice([15, 20, 25]),
+                choice([ 25, 50, 100, 300]),
             # data augmentation
             'hflip_prob':
                 .1 + random.uniform(-1, 1) * .28,
