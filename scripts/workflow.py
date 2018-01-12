@@ -66,7 +66,7 @@ def gen_randomish_config2(name=None):
         else:
             return None
     else:
-        shift_ranges = np.abs(0.1 + random.uniform(-1, 1) * .2)
+        shift_ranges = 0.3 + random.uniform(-1, 1) * .2
         channels = choice([2, 3])
         if channels == 2:
             preproc_strat = 'band2'
@@ -166,7 +166,7 @@ def gen_randomish_config(name=None):
         else:
             return None
     else:
-        shift_ranges = random.random() * .4
+        shift_ranges = random.uniform(-1,1)*.2 + .3
         channels = choice([2, 3, 3])
         if channels == 2:
             preproc_strat = 'band2'
@@ -351,7 +351,8 @@ def run_iterations(iters, name=None):
     """ Run iters iterations using random config func."""
     for i in range(int(iters)):
         print('Starting iteration {}/{}\n\n'.format(i, iters))
-        conf = gen_randomish_config(name)
+        #conf = gen_randomish_config(name)
+        conf = gen_randomish_config2(name)
         if conf:
             single_run(conf)
         else:
