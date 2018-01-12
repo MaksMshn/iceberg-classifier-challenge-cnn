@@ -282,7 +282,9 @@ def model1_deeper_meta(**config):
     depth = config.get('depth', 1)
     alpha_drop = config.get('alpha_drop', False)
     if alpha_drop:
-        Dropout = AlphaDropout
+        dropout = AlphaDropout
+    else:
+        dropout = Dropout
 
     input_1 = Input(shape=(75, 75, channels))
 
@@ -295,28 +297,28 @@ def model1_deeper_meta(**config):
     fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = BatchNormalization()(fcnn)
-    fcnn = Dropout(0.1)(fcnn)
+    fcnn = dropout(0.1)(fcnn)
 
     fcnn = Conv2D(
         64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
     fcnn = BatchNormalization()(fcnn)
-    fcnn = Dropout(0.1)(fcnn)
+    fcnn = dropout(0.1)(fcnn)
 
     fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
-    fcnn = Dropout(0.2)(fcnn)
+    fcnn = dropout(0.2)(fcnn)
 
     for i in range(depth):
         fcnn = Conv2D(
             64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
-        fcnn = Dropout(0.2)(fcnn)
+        fcnn = dropout(0.2)(fcnn)
         fcnn = BatchNormalization()(fcnn)
 
     fcnn = Conv2D(
         64,
         kernel_size=(3, 3),
         activation=relu_type,)(fcnn)
-    fcnn = Dropout(0.2)(fcnn)
+    fcnn = dropout(0.2)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = BatchNormalization()(fcnn)
 
@@ -328,13 +330,13 @@ def model1_deeper_meta(**config):
     fcnn = Concatenate()([fcnn, input_2_bn])
 
     dense = Dense(128, activation=relu_type)(fcnn)
-    dense = Dropout(0.2)(dense)
+    dense = dropout(0.2)(dense)
     dense = BatchNormalization()(dense)
     dense = Dense(128, activation=relu_type)(dense)
-    dense = Dropout(0.2)(dense)
+    dense = dropout(0.2)(dense)
     dense = BatchNormalization()(dense)
     dense = Dense(64, activation=relu_type)(dense)
-    dense = Dropout(0.2)(dense)
+    dense = dropout(0.2)(dense)
 
     output = Dense(1, activation="sigmoid")(dense)
 

@@ -247,7 +247,9 @@ def gen_randomish_config2(name=None):
                 False,
             # deep model config
             'depth':
-                choice(list(range(8)))
+                choice(list(range(8))),
+            'alpha_drop':
+                choise([True, False])
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
@@ -462,7 +464,7 @@ def run_iterations(iters, name=None):
     for i in range(int(iters)):
         print('Starting iteration {}/{}\n\n'.format(i, iters))
         #conf = gen_randomish_config(name)
-        conf = gen_randomish_config3(name)
+        conf = gen_randomish_config2(name)
         if conf:
             single_run(conf)
         else:
