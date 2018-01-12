@@ -48,6 +48,106 @@ def parase_arguments(argv):
 
 ####  Hyperparameters ####
 
+
+def gen_randomish_config3(name=None):
+    name = name or 'deep_randomish_config'
+    if random.random() < -0.25:  #never
+        configs = glob.glob('../config/config*json')
+        config = choice(configs)
+        with open(config) as f:
+            config = json.load(f)
+        config['pseudo_train'] = True
+        prev_tmp = config['tmp']
+        prev_name = config['name']
+        prev_weights = "../weights/weights_{}_{}.hdf5".format(
+            prev_name, prev_tmp)
+        if os.path.isfile(prev_weights):
+            config['model_fn'] = prev_weights
+            return config
+        else:
+            return None
+    else:
+        shift_ranges = 0.4 + random.uniform(-1, 1) * .2
+        channels = choice([2, 3,3])
+        if channels == 2:
+            preproc_strat = 'band2'
+        else:
+            preproc_strat = 'band3'
+        config = {
+            'name':
+                name,
+            # training
+            'lr':
+                np.random.lognormal(sigma=0.5) *1.0e-5,
+            'decay':
+                np.random.lognormal() * 3.4670665307866379e-06,
+            'relu_type':
+                choice(['selu']),
+            'epochs':
+                choice([ 200,300,500]),
+            'full_cycls_per_epoch':
+                8,
+            'batch_size':
+                choice([64]),
+            'lr_patience':
+                choice([50, 100]),
+            'stop_patience':
+                choice([15, 20, 25]),
+            # data augmentation
+            'hflip_prob':
+                .1 + random.uniform(-1, 1) * .28,
+            'vflip_prob':
+                .5 + random.uniform(-1, 1) * .28,
+            'rot90_prob':
+                0.73007147223015134 + random.uniform(-1, 1) * .14,
+            'rot_prob':
+                0.39286442681668626 + random.uniform(-1, 1) * .28,
+            'rotate_rg':
+                30.352924041777015 + random.uniform(-1, 1) * 14,
+            'shift_prob':
+                0.45233683486776546 + random.uniform(-1, 1) * .14,
+            'shift_width_rg':
+                shift_ranges,
+            'shift_height_rg':
+                shift_ranges,
+            'zoom_prob':
+                0.43867510928667224 + random.uniform(-1, 1) * .14,
+            'zoom_rg': (1 - random.random() / 2, 1 + random.random()),
+            'noise_prob':
+                0.1338943735248288 + random.uniform(-1, 1) * .1,
+            'noise_rg':
+                np.random.lognormal(sigma=.2) * 0.019821861298954285,
+            # model
+            'use_meta':
+                False,
+            'model_fn':
+                'model2_meta',
+            # preprocessing
+            'preproc_strat':
+                preproc_strat,
+            'channels':
+                channels,
+            'inc_angle_fill':
+                40,
+            'band3_op':
+                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
+                           'lambda x1, x2: x1*x2']),
+            'soft_targets':
+                False,
+            'soft_val':
+                0.99,  # only if soft_targets = True, must be 0.5 < x <= 1.0
+            # pseudo train
+            'pseudo_train':
+                False,
+            # deep model config
+            'depth':
+                choice(list(range(5)))
+        }
+        if 'meta' in config['model_fn']:
+            config['use_meta'] = True
+        return config
+
+
 def gen_randomish_config2(name=None):
     name = name or 'optimized_m1_randomish_config'
     if random.random() < -0.25: #never
@@ -131,7 +231,8 @@ def gen_randomish_config2(name=None):
             'inc_angle_fill':
                 40,
             'band3_op':
-                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2']),
+                choice(['lambda x1, x2: x1-x2', 'lambda x1, x2: x1+x2',
+                          'lambda x1, x2: x1*x2']),
             'soft_targets':
                 False,
             'soft_val':

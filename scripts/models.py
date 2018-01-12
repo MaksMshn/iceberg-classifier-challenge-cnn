@@ -282,6 +282,8 @@ def model2_meta(**config):
     initializer = config.get('initializer', 'lecun_normal')
     # set activation independently
     relu_type = 'selu'
+    depth = config.get('depth', 1)
+
 
     input_1 = Input(shape=(75, 75, channels))
     fcnn = BatchNormalization()(input_1)
@@ -326,47 +328,21 @@ def model2_meta(**config):
         kernel_size=(3, 3),
         activation=relu_type,
         kernel_initializer=initializer)(fcnn_1)
-    fcnn = AlphaDropout(0.2)(fcnn)
-    fcnn_2 = BatchNormalization()(fcnn_2)
-
-    fcnn_2 = Conv2D(
-        128,
-        kernel_size=(3, 3),
-        activation=relu_type,
-        padding='same',
-        kernel_initializer=initializer)(fcnn_2)
-    fcnn = AlphaDropout(0.2)(fcnn)
-    fcnn_2 = BatchNormalization()(fcnn_2)
-
-    fcnn_2 = Conv2D(
-        128,
-        kernel_size=(3, 3),
-        activation=relu_type,
-        padding='same',
-        kernel_initializer=initializer)(fcnn_2)
-    fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
     fcnn_2 = AlphaDropout(0.2)(fcnn_2)
-    fcnn_2 = BatchNormalization()(fcnn_2)
-
-    fcnn_2 = Conv2D(
-        64,
-        kernel_size=(3, 3),
-        activation=relu_type,
-        kernel_initializer=initializer)(fcnn_2)
     fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
-    fcnn_2 = AlphaDropout(0.2)(fcnn_2)
     fcnn_2 = BatchNormalization()(fcnn_2)
 
-    fcnn_2 = Conv2D(
-        128,
-        kernel_size=(3, 3),
-        activation=relu_type,
-        kernel_initializer=initializer)(fcnn_2)
-    fcnn_2 = MaxPooling2D((2, 2), strides=(2, 2))(fcnn_2)
-    fcnn_2 = AlphaDropout(0.2)(fcnn_2)
-    fcnn_2 = BatchNormalization()(fcnn_2)
+    for i in range(depth):
+        fcnn_2 = Conv2D(
+            64,
+            kernel_size=(3, 3),
+            activation=relu_type,
+            padding='same',
+            kernel_initializer=initializer)(fcnn_2)
+        fcnn_2 = AlphaDropout(0.2)(fcnn_2)
+        fcnn_2 = BatchNormalization()(fcnn_2)
 
-    fcnn_2 = Flatten()(fcnn_2)
+    fcnn_2 = GlobalAveragePooling2D()(fcnn_2)
 
     input_2 = Input(shape=[1], name='angle')
     input_2_bn = BatchNormalization()(input_2)
