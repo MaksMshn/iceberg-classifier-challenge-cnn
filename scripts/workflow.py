@@ -249,7 +249,7 @@ def gen_randomish_config2(name=None):
             'depth':
                 choice(list(range(8))),
             'alpha_drop':
-                choise([True, False])
+                choice([True, False])
         }
         if 'meta' in config['model_fn']:
             config['use_meta'] = True
