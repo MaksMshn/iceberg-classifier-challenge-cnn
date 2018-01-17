@@ -37,14 +37,19 @@ def log_loss(t, p):
     return np.mean(h_tp)
 
 
-def data_generator(data, meta_data, labels, sample_weights=None, **config):
+def data_generator(data, meta_data, labels, **config):
 
     indices = [i for i in range(len(labels))]
     use_meta = config.get('use_meta', False)
     batch_size = config.get('batch_size', 16)
+    batch_size = config.get('sample_weights', None)
 
-    if np.any(sample_weights):
+    if sample_weights:
         use_sample_weights = True
+        sample_weights = np.load(sample_weights)
+    else:
+        use_sample_weights = False
+        sample_weights = None
 
     while True:
 
@@ -202,12 +207,6 @@ def train(dataset, model, **config):
     pseudo = config.get('pseudo_train', False)
     out_name = config.get('output_name')
     model_w_name = config.get('model_w_name')
-    sample_weights = config.get('sample_weights', None)
-
-    if sample_weights:
-        sample_weights = np.load(sample_weights)
-    else:
-        sample_weights = None
 
     if pseudo:
         ((labels, data, meta), (_, test, test_meta)) = dataset
@@ -271,12 +270,7 @@ def train(dataset, model, **config):
             validation_data=valid_data)
     else:
         model.fit_generator(
-            generator=data_generator(
-                X_train,
-                Xm_train,
-                y_train,
-                sample_weights=sample_weights,
-                **config),
+            generator=data_generator(X_train, Xm_train, y_train, **config),
             steps_per_epoch=np.ceil(
                 full_cycls_per_epoch * len(y_train) / batch_size),
             epochs=epochs,
