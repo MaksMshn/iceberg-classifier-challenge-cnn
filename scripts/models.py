@@ -349,16 +349,17 @@ def model1_deeper_meta(**config):
     return model
 
 
-def model2_deeper_meta(**config):
+def model_fcnn_meta(**config):
     """ Bandwidth model from the kernel keras0.18lb - managed to 
     produce 0.16 when trained with data augumentation."""
 
     lr = config.get('lr', 8e-5)
     decay = config.get('decay', 1e-6)
-    relu_type = config.get('relu_type', 'relu')
-    channels = config.get('channels', 3)
+    relu_type = config.get('relu_type', 'selu')
+    channels = config.get('channels', 2)
     depth = config.get('depth', 1)
-    alpha_drop = config.get('alpha_drop', False)
+    initializer = config.get('initializer', 'lecun_normal')
+    alpha_drop = config.get('alpha_drop', True)
     if alpha_drop:
         dropout = AlphaDropout
     else:
@@ -367,35 +368,45 @@ def model2_deeper_meta(**config):
     input_1 = Input(shape=(75, 75, channels))
 
     fcnn = Conv2D(
-        32, kernel_size=(3, 3),
+        32,
+        kernel_size=(3, 3),
+        kernel_initializer=initializer,
         activation=relu_type)(BatchNormalization()(input_1))
-    fcnn = MaxPooling2D((3, 3))(fcnn)
     fcnn = BatchNormalization()(fcnn)
 
-    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
-    fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
-    fcnn = BatchNormalization()(fcnn)
+    fcnn = Conv2D(
+        64,
+        kernel_size=(3, 3),
+        kernel_initializer=initializer,
+        activation=relu_type)(fcnn)
+    fcnn = MaxPooling2D((3, 3))(fcnn)
     fcnn = dropout(0.1)(fcnn)
 
     fcnn = Conv2D(
-        64, kernel_size=(3, 3), activation=relu_type, padding='same')(fcnn)
-    fcnn = BatchNormalization()(fcnn)
+        64,
+        kernel_size=(3, 3),
+        kernel_initializer=initializer,
+        activation=relu_type,
+        padding='same')(fcnn)
     fcnn = dropout(0.1)(fcnn)
 
-    fcnn = Conv2D(64, kernel_size=(3, 3), activation=relu_type)(fcnn)
+    fcnn = Conv2D(
+        64,
+        kernel_size=(3, 3),
+        kernel_initializer=initializer,
+        activation=relu_type)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
-    fcnn_branch = dropout(0.2)(fcnn)
+    fcnn = dropout(0.2)(fcnn)
 
     # branch deep
     for i in range(depth):
-        if i == 0:
-            inp = fcnn_branch
-        else:
-            inp = fcnn
         fcnn = Conv2D(
-            64, kernel_size=(3, 3), activation=relu_type, padding='same')(inp)
+            64,
+            kernel_size=(3, 3),
+            kernel_initializer=initializer,
+            activation=relu_type,
+            padding='same')(fcnn)
         fcnn = dropout(0.2)(fcnn)
-        fcnn = BatchNormalization()(fcnn)
 
     # add branches
     fcnn = add([fcnn_branch, fcnn])
@@ -406,7 +417,6 @@ def model2_deeper_meta(**config):
         activation=relu_type,)(fcnn)
     fcnn = dropout(0.2)(fcnn)
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
-    fcnn = BatchNormalization()(fcnn)
 
     fcnn = Flatten()(fcnn)
 
@@ -414,17 +424,11 @@ def model2_deeper_meta(**config):
     input_2_bn = BatchNormalization()(input_2)
 
     fcnn = Concatenate()([fcnn, input_2_bn])
+    dense = BatchNormalization()(fcnn)
 
-    dense = Dense(128, activation=relu_type)(fcnn)
-    dense = dropout(0.2)(dense)
-    dense = BatchNormalization()(dense)
-    dense = Dense(128, activation=relu_type)(dense)
-    dense = dropout(0.2)(dense)
-    dense = BatchNormalization()(dense)
-    dense = Dense(64, activation=relu_type)(dense)
-    dense = dropout(0.2)(dense)
-
-    output = Dense(1, activation="sigmoid")(dense)
+    output = Dense(
+        1,
+        activation="sigmoid",)(dense)
 
     model = Model([input_1, input_2], output)
 
