@@ -349,7 +349,7 @@ def model1_deeper_meta(**config):
     return model
 
 
-def model_fcnn_meta(**config):
+def model1_fcnn_meta(**config):
     """ Bandwidth model from the kernel keras0.18lb - managed to 
     produce 0.16 when trained with data augumentation."""
 

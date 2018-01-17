@@ -37,11 +37,14 @@ def log_loss(t, p):
     return np.mean(h_tp)
 
 
-def data_generator(data, meta_data, labels, **config):
+def data_generator(data, meta_data, labels, sample_weights=None, **config):
 
     indices = [i for i in range(len(labels))]
     use_meta = config.get('use_meta', False)
     batch_size = config.get('batch_size', 16)
+
+    if np.any(sample_weights):
+        use_sample_weights = True
 
     while True:
 
@@ -69,9 +72,14 @@ def data_generator(data, meta_data, labels, **config):
             x_batch = np.array(x_batch, dtype=np.float32)
 
             if use_meta:
-                yield [x_batch, xm_batch], y_batch
+                x_out = [x_batch, xm_batch]
             else:
-                yield x_batch, y_batch
+                x_out = x_batch
+
+            if use_sample_weights:
+                yield x_out, y_batch, sample_weights[sel_indices]
+            else:
+                yield x_out, y_batch
 
 
 def predict(model, data, data_meta=None, **config):
@@ -194,6 +202,12 @@ def train(dataset, model, **config):
     pseudo = config.get('pseudo_train', False)
     out_name = config.get('output_name')
     model_w_name = config.get('model_w_name')
+    sample_weights = config.get('sample_weights', None)
+
+    if sample_weights:
+        sample_weights = np.load(sample_weights)
+    else:
+        sample_weights = None
 
     if pseudo:
         ((labels, data, meta), (_, test, test_meta)) = dataset
@@ -257,7 +271,12 @@ def train(dataset, model, **config):
             validation_data=valid_data)
     else:
         model.fit_generator(
-            generator=data_generator(X_train, Xm_train, y_train, **config),
+            generator=data_generator(
+                X_train,
+                Xm_train,
+                y_train,
+                sample_weights=sample_weights,
+                **config),
             steps_per_epoch=np.ceil(
                 full_cycls_per_epoch * len(y_train) / batch_size),
             epochs=epochs,
