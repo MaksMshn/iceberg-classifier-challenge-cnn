@@ -42,7 +42,7 @@ def data_generator(data, meta_data, labels, **config):
     indices = [i for i in range(len(labels))]
     use_meta = config.get('use_meta', False)
     batch_size = config.get('batch_size', 16)
-    batch_size = config.get('sample_weights', None)
+    sample_weights = config.get('sample_weights', None)
 
     if sample_weights:
         use_sample_weights = True
