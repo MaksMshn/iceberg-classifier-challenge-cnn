@@ -398,7 +398,6 @@ def model1_fcnn_meta(**config):
     fcnn = MaxPooling2D((2, 2), strides=(2, 2))(fcnn)
     fcnn = dropout(0.2)(fcnn)
 
-    # branch deep
     for i in range(depth):
         fcnn = Conv2D(
             64,
@@ -407,9 +406,6 @@ def model1_fcnn_meta(**config):
             activation=relu_type,
             padding='same')(fcnn)
         fcnn = dropout(0.2)(fcnn)
-
-    # add branches
-    fcnn = add([fcnn_branch, fcnn])
 
     fcnn = Conv2D(
         64,
